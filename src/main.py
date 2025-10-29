@@ -7,10 +7,12 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
 @app.get("/")
 def read_root():
     """A simple hello world endpoint."""
     return {"message": "Hello from the API"}
+
 
 @app.get("/health")
 def health_check():
