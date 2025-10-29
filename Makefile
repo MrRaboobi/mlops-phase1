@@ -3,7 +3,7 @@
 
 ### **Content for Makefile**
 
-Minimal commands (we’ll expand later):
+Minimal commands (we’ll expand as we go on):
 
 ```makefile
 dev:
@@ -24,3 +24,6 @@ docker:
 
 clean:
 	rm -rf __pycache__ .pytest_cache
+
+run:
+	docker run -p 8000:8000 ecg-app
