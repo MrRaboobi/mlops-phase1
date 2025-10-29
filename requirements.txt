@@ -1,0 +1,13 @@
+# requirements.txt
+# Application dependencies
+fastapi
+uvicorn[standard]
+
+# Testing and Linting dependencies
+pytest
+pytest-cov
+requests
+ruff
+black
+pip-audit
+pre-commit
