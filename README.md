@@ -16,7 +16,7 @@ ECG Data → Pre-processing → CNN/LSTM Model → FastAPI Inference → LLM Exp
 
 ---
 
-#FAQ
+## FAQ
 
 ### Q: Docker build fails on Windows?
 A: Make sure Docker Desktop is running and WSL 2 backend is enabled.
@@ -29,7 +29,7 @@ A: For now it’s a placeholder; real tracking will be added in further mileston
 
 --- 
 
-#👥 Team
+## 👥 Team
 
 Muhammad Hammad Khan 
 Muhammad Maaz Siddiqui 
