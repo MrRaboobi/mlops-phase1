@@ -1,0 +1,64 @@
+# ==========================
+# Python and Virtual Environment
+# ==========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+venv/
+.env/
+.env*
+*.env
+
+# ==========================
+# Logs and Outputs
+# ==========================
+logs/
+*.log
+*.out
+*.err
+*.pid
+
+# ==========================
+# Data and Models
+# ==========================
+data/
+datasets/
+models/
+artifacts/
+mlruns/
+outputs/
+checkpoints/
+
+# ==========================
+# IDEs and OS Files
+# ==========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ==========================
+# Docker
+# ==========================
+*.pid
+*.sock
+
+# ==========================
+# Build and Cache
+# ==========================
+build/
+dist/
+.cache/
+pytest_cache/
+__pycache__/
+
+# ==========================
+# Temporary / Generated Files
+# ==========================
+tmp/
+*.bak
+*.swp
+*.temp
