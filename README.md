@@ -28,7 +28,9 @@
 
 The following diagram illustrates the flow from **data ingestion → training → inference API**, along with supporting MLOps components (CI/CD, monitoring, and compliance).
 
-![Architecture Diagram](docs/architecture_diagram.png)
+   <p align="center">
+  <img src="docs/architecture_diagram.png" alt="error" width="300"/>
+  </p>
 
 ---
 
@@ -204,6 +206,7 @@ For this milestone, two major AWS services were used — **Amazon EC2** and **Am
 5. Verification
 - *Open browser →* visit [http://<PublicIP>:8000/docs]
 - The *Swagger UI* confirms the FastAPI app is live and deployed successfully.
+
 <p align="center">
   <img src="docs/aws-ec2api-swaggerUI.png" alt="error" width="300"/>
 </p>
