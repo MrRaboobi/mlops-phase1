@@ -1,5 +1,6 @@
 import mlflow
 
+
 def setup_mlflow():
 
     mlflow.set_tracking_uri("file:./mlruns")
@@ -10,6 +11,7 @@ def setup_mlflow():
         mlflow.log_metric("accuracy", 0.93)
         mlflow.set_tag("stage", "Milestone1")
         print("MLflow tracking initialized at ./mlruns")
+
 
 if __name__ == "__main__":
     setup_mlflow()

@@ -1,4 +1,4 @@
-# Federated ECGGuard  
+# Federated ECGGuard
 **AI-Powered ECG Monitoring and Early Warning System**
 
 ---
@@ -11,7 +11,7 @@ Federated ECGGuard is an AI-powered system that continuously monitors ECG signal
 ## 🏗️ Architecture
 ![Architecture Diagram](docs/architecture_diagram.png)
 
-**Flow:**  
+**Flow:**
 ECG Data → Pre-processing → CNN/LSTM Model → FastAPI Inference → LLM Explanations → Monitoring (Dashboards)
 
 ---
@@ -27,13 +27,13 @@ A: Run make format to auto-format code using Black.
 ### Q: MLflow URI not found?
 A: For now it’s a placeholder; real tracking will be added in further milestones.
 
---- 
+---
 
 ## 👥 Team
 
-Muhammad Hammad Khan 
-Muhammad Maaz Siddiqui 
-Muhammad Ibrahim Iqbal 
+Muhammad Hammad Khan
+Muhammad Maaz Siddiqui
+Muhammad Ibrahim Iqbal
 Muhammad Ibrahim Farid
 
 ## ⚡ Quick Start

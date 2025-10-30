@@ -27,3 +27,6 @@ clean:
 
 run:
 	docker run -p 8000:8000 ecg-app
+
+check:
+	pre-commit run --all-files

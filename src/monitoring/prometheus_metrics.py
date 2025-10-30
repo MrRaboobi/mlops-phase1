@@ -1,6 +1,6 @@
 from prometheus_client import start_http_server, Gauge
-import time
 import random
+
 
 def start_prometheus_metrics():
     """
