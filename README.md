@@ -1,11 +1,14 @@
-# HEARTSIGHT
+<h1 align="center">HEARTSIGHT</h1>
 
-![Project Logo](docs/mlops_app_logo.png)
+<p align="center">
+  <img src="docs/logo.png" alt="Heartsight Logo" width="300"/>
+</p>
 
-HEARTSIGHT is an AI-powered ECG monitoring and early warning system designed to support distributed healthcare data collection and predictive diagnostics.
-This README represents **Milestone 1** of the MLOps course project that builds the foundation for a reproducible, production-grade pipeline with CI/CD, monitoring, observability, and compliance features.
+<p align="center">
+  HEARTSIGHT is an AI-powered ECG monitoring and early warning system designed to support distributed healthcare data collection and predictive diagnostics.
+  This README represents <strong>Milestone 1</strong> of the MLOps course project that builds the foundation for a reproducible, production-grade pipeline with CI/CD, monitoring, observability, and compliance features.
+</p>
 
----
 
 ## Architecture Diagram
 
