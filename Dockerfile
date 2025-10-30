@@ -19,7 +19,7 @@ COPY src/ src/
 COPY scripts/ scripts/
 
 # Make healthcheck script executable
-RUN chmod +x scripts/healthcheck.sh
+RUN chmod +x scripts/*.sh
 
 # Create non-root user
 RUN useradd -m appuser
