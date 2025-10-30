@@ -50,6 +50,40 @@ make run
 
 The Docker container will serve the application at: [http://localhost:8000]
 
+### 6. Run with Docker Compose (profiles: dev, test, prod)
+
+This project includes a `docker-compose.yml` with multiple services and profiles:
+
+- `app`: FastAPI service (exposes port 8000)
+- `metrics`: Prometheus metrics exporter from `src/monitoring/prometheus_metrics.py` (port 9000)
+- `prometheus`: Scrapes the `metrics` service (port 9090)
+- `grafana`: Optional dashboards (port 3000)
+- `db`: Postgres placeholder (port 5432)
+
+Profiles and commands:
+
+- Dev (app + metrics + prometheus + grafana + db):
+  - `docker compose --profile dev up -d`
+- Prod (same stack, prod profile):
+  - `docker compose --profile prod up -d`
+- Test (app + db):
+  - `docker compose --profile test up -d`
+
+Ports:
+
+- App: `http://localhost:8000`
+- Metrics: `http://localhost:9000`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3000`
+
+Prometheus is configured via `infra/prometheus/prometheus.yml` to scrape the `metrics` container.
+
+Environment variables:
+
+- Copy the sample env file and edit secrets locally (do not commit `.env`):
+  - `cp .env.example .env`
+  - Update `POSTGRES_PASSWORD`, `SECRET_KEY`, etc.
+
 ## Makefile Targets
 
 | Target        | Description                                  |
@@ -138,6 +172,11 @@ All dependencies were scanned using:
 - `pip-licenses` → open-source license validation
 
 Audit results stored in `docs/compliance_report.txt`.
+
+Additional resources:
+
+- See `LICENSE` for the project's open-source license (MIT).
+- See `CODE_OF_CONDUCT.md` for community standards and reporting guidance.
 
 ---
 

@@ -64,6 +64,12 @@ jobs:
           ruff check .
           black --check .
 
+      # Step 4.5: pip-audit for dependencies
+      - name: Security audit with pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit --output table --exit-code 1
+
       # Step 5: Test with coverage (≥80%)
       - name: Run tests with coverage
         run: |
