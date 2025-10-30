@@ -30,3 +30,6 @@ run:
 
 check:
 	pre-commit run --all-files
+
+audit:
+	bash scripts/dependency_audit.sh
