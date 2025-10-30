@@ -1,7 +1,7 @@
 <h1 align="center">HEARTSIGHT</h1>
 
 <p align="center">
-  <img src="docs/logo.png" alt="Heartsight Logo" width="300"/>
+  <img src="docs/mlops_app_logo.png" alt="Heartsight Logo" width="300"/>
 </p>
 
 <p align="center">
