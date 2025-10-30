@@ -20,8 +20,8 @@
 7. [FAQ / Troubleshooting](#faq--troubleshooting)
 8. [Compatibility](#compatibility)
 9. [License & Compliance](#license--compliance)
-10.[Notes](#notes)
-11.[Bonus Paths](bonus--paths)
+10. [Notes](#notes)
+11. [Bonus Paths](bonus--paths)
 
 
 ## Architecture Diagram
