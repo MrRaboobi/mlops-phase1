@@ -1,21 +1,21 @@
 from fastapi import FastAPI
+from src.api.routers import health, predict
 
-app = FastAPI(title="Federated ECGGuard API", version="1.0")
+app = FastAPI(
+    title="Federated ECGGuard API",
+    description="API documentation for the ECGGuard MLOps system. Provides endpoints for health monitoring and ECG signal predictions.",
+    version="1.0.0",
+)
 
-
-@app.get("/")
-def root():
-    return {
-        "message": "Welcome to Federated ECGGuard API (This is just the Milestone 1 placeholder)"
-    }
-
-
-@app.get("/health")
-def health():
-    return {"status": "healthy"}
+# Include router modules
+app.include_router(health.router)
+app.include_router(predict.router)
 
 
-@app.get("/predict")
-def predict():
-    # mock response for now
-    return {"message": "Mock prediction: Normal ECG signal"}
+@app.get("/", tags=["Root"])
+def read_root():
+    return {"message": "Welcome to Federated ECGGuard API"}
+
+
+# Swagger UI: http://localhost:8000/docs
+# ReDoc: http://localhost:8000/redoc
