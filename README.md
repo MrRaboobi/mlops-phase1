@@ -180,6 +180,65 @@ Additional resources:
 
 ---
 
+## Cloud Storage Integration (AWS S3)
+
+This project supports storing and retrieving artifacts (models, reports, data) from Amazon S3 using environment variables and IAM roles for secure access.
+
+### Configuration
+- Set your bucket name in `.env` (never commit real secrets):
+  - `S3_BUCKET=heartsight-<your-unique-suffix>`
+- The application loads `.env` at startup and uses `boto3` under the hood.
+- On EC2, attach an IAM role to the instance with least-privilege access to your bucket (ListBucket, Get/Put/DeleteObject). No static keys are required.
+
+### Local (developer machine)
+1) Configure AWS CLI once (uses your IAM user or SSO):
+   - `aws configure --profile heartsight`
+2) Ensure `.env` has your bucket name and run the app.
+3) Optional sanity checks:
+   - `aws s3 ls s3://$env:S3_BUCKET/` (PowerShell)
+
+### Example S3 usage in the API
+Endpoints (if enabled) to validate connectivity:
+- `GET /s3/ping` → returns the configured bucket
+- `POST /s3/write-sample` → writes `samples/hello.txt` to your bucket
+- `GET /s3/read-sample` → reads back the sample object
+
+### Security Model (recommended)
+- Keep S3 buckets private. Do not share access keys.
+- For EC2: use an EC2 instance role (trust: `ec2.amazonaws.com`) with an S3 policy limited to your bucket.
+- For Lambda: use a Lambda execution role (trust: `lambda.amazonaws.com`) with an S3 policy.
+- For end users without AWS accounts: use pre-signed URLs for specific objects (time-limited GET/PUT).
+
+### Minimal S3 policy (replace the bucket name)
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Sid": "ListBucket", "Effect": "Allow", "Action": ["s3:ListBucket"], "Resource": "arn:aws:s3:::heartsight-<suffix>" },
+    { "Sid": "RWObjects", "Effect": "Allow", "Action": ["s3:GetObject","s3:PutObject","s3:DeleteObject"], "Resource": "arn:aws:s3:::heartsight-<suffix>/*" }
+  ]
+}
+```
+
+### Pre-signed URL (share temporary access)
+```python
+import boto3
+
+s3 = boto3.client("s3")
+url = s3.generate_presigned_url(
+    "getObject",
+    Params={"Bucket": "heartsight-<suffix>", "Key": "samples/hello.txt"},
+    ExpiresIn=600,
+)
+print(url)
+```
+
+### Notes
+- Region: this project commonly uses `us-east-1`. When creating buckets in `us-east-1`, omit the `LocationConstraint` parameter.
+- Dependencies: ensure `boto3` is present in `requirements.txt` for containerized runs.
+
+---
+
 ## Future Work
 
 - Integrate real ECG model training pipeline.
