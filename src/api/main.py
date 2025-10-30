@@ -1,9 +1,17 @@
-from fastapi import FastAPI
-from src.api.routers import health, predict
+"""Load environment early; ignore E402 for import order.
+
+We intentionally load .env before importing app routers to ensure
+environment variables are available at import-time.
+"""
+
+# ruff: noqa: E402
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
+from fastapi import FastAPI
+from src.api.routers import health, predict, storage
 
 app = FastAPI(
     title="Federated ECGGuard API",
@@ -18,6 +26,7 @@ print(os.getenv("SECRET_KEY"))
 
 app.include_router(health.router)
 app.include_router(predict.router)
+app.include_router(storage.router)
 
 
 @app.get("/", tags=["Root"])
