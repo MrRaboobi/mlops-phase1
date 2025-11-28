@@ -33,3 +33,9 @@ check:
 
 audit:
 	bash scripts/dependency_audit.sh
+
+train:
+	python src/pipeline/train.py
+
+evidently:
+	python src/monitoring/evidently_server.py

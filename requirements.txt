@@ -1,21 +1,21 @@
 fastapi
 uvicorn
-
 pytest
 ruff
 black
 pytest-cov
-
 pip-audit
 pre-commit
 
-mlflow
+# MLOps & Monitoring
+mlflow  # MLflow for experiment tracking and model registry
 evidently
 prometheus-client
 
+# Data Science & ML
 pandas
 numpy
 requests
-
-python-dotenv
-boto3
+scikit-learn
+xgboost  # Gradient boosting for ECG classification
+matplotlib  # For plotting confusion matrices (optional but good)

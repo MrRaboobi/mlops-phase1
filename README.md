@@ -36,27 +36,53 @@ The following diagram illustrates the flow from **data ingestion → training �
 
 ## Quick Start Guide
 
+**One-line setup:**
+```bash
+git clone https://github.com/<your-username>/mlops-phase1.git && cd mlops-phase1 && make dev
+```
+
+**Detailed steps:**
+
 ### 1. Clone the Repository
+```bash
 git clone https://github.com/<your-username>/mlops-phase1.git
 cd mlops-phase1
-git checkout ms1_hk
+```
 
 ### 2. Create and Activate Virtual Environment
 
-To set up your Python virtual environment, execute the following commands in your terminal:
+**Windows:**
+```powershell
 python -m venv venv
 .\venv\Scripts\activate
+```
+
+**Linux/Mac:**
+```bash
+python -m venv venv
+source venv/bin/activate
+```
 
 ### 3. Install Dependencies
-
-Once your virtual environment is active, install all necessary project dependencies using `pip`:
+```bash
 pip install -r requirements.txt
+```
 
 ### 4. Run the Application
 
-To start the application in development mode, use the `make dev` command:
+**Using Make (Linux/Mac):**
+```bash
+make dev
+```
+
+**Using Python script (Windows):**
+```bash
+python manage.py dev
+```
 
 The API will be accessible at: [http://localhost:8000](http://localhost:8000)
+
+**Note:** On Windows, use `python manage.py <command>` instead of `make <command>`.
 
 ### 5. Run Dockerized Version
 
@@ -91,6 +117,7 @@ Ports:
 - Metrics: `http://localhost:9000`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3000`
+- Evidently Dashboard: `http://localhost:7000` (run `python src/monitoring/evidently_server.py`)
 
 Prometheus is configured via `infra/prometheus/prometheus.yml` to scrape the `metrics` container.
 
@@ -107,6 +134,8 @@ Prometheus is configured via `infra/prometheus/prometheus.yml` to scrape the `me
 | `make audit`  | Run dependency and license audit             |
 | `make clean`  | pre-commit run --all-files                   |
 | `make check`  | Run dependency and license audit             |
+| `make train`  | Run model training pipeline                  |
+| `make evidently` | Start Evidently dashboard server (port 7000) |
 
 ## Deliverables Summary
 
@@ -127,8 +156,33 @@ Prometheus is configured via `infra/prometheus/prometheus.yml` to scrape the `me
 - Automated linting, testing, and Docker image builds.
 
 ### D5 – Monitoring & Observability
-- Integrated **MLflow**, **Evidently**, and **Prometheus**.
-- Generated monitoring dashboards and sample reports under `/docs`.
+
+#### MLflow Tracking & Model Registry
+- **MLflow Tracking URI:** `file:./mlruns` (local file-based tracking)
+- **Experiment:** `Heartsight_Phase1_Baseline`
+- **Registered Model:** `heartsight_xgb_v1` (Version 1)
+- **Model Location:** `mlruns/models/heartsight_xgb_v1/version-1/`
+- **View MLflow UI:** Run `mlflow ui` and visit `http://localhost:5000`
+
+#### Evidently Dashboard
+- **Data Drift Dashboard:** Exposed at `http://localhost:7000`
+- **Report Generation:** Run `python src/monitoring/drift_dashboard.py` to generate HTML report
+- **Location:** `docs/drift_report.html`
+
+#### Prometheus & Grafana
+- **Prometheus:** Scrapes metrics from `metrics` service (port 9090)
+- **Grafana:** Visualization dashboards (port 3000)
+- **Metrics Exporter:** `src/monitoring/prometheus_metrics.py` (port 9000)
+- **Metrics Collected:**
+  - API request count
+  - API request latency
+  - Model prediction count
+  - Error rates
+
+**Screenshots:**
+- MLflow Tracking: `docs/mlflow_tracking.png`
+- Prometheus Metrics: `docs/prometheus_metrics.png`
+- Drift Report: `docs/drift_report.png`
 
 ### D6 – Code Quality & Pre-commit Hooks
 - Configured `.pre-commit-config.yaml` for linting, formatting, and security scanning.

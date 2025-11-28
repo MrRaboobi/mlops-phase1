@@ -25,7 +25,9 @@
 | **Testing (Pytest) and Test Cases**       | [name]          | Author/maintainer for test coverage                |
 | **Compliance, Pre-commit, Pip-Audit**     | Alex Lee        | Setup `.pre-commit-config.yaml`, pip-audit         |
 | **Documentation (README, contribution)**  | All             | Authored README sections & diagrams                |
-| **Model Build/Training Pipeline (future)**| All             | Placeholder for Milestones 2/3                     |
+| **Model Training Pipeline (XGBoost)**      | [name]          | Implemented `src/pipeline/train.py` with XGBoost, feature extraction, MLflow logging |
+| **Model Loader & API Integration**         | [name]          | Created `src/utils/model_loader.py`, integrated with FastAPI `/predict` endpoint |
+| **Data Processing & Feature Engineering**   | [name]          | Memory-efficient chunked data loading, statistical feature extraction (108 features) |
 
 ---
 
