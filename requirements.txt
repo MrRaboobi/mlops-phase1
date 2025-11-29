@@ -19,3 +19,13 @@ requests
 scikit-learn
 xgboost  # Gradient boosting for ECG classification
 matplotlib  # For plotting confusion matrices (optional but good)
+
+# RAG & LLM (Phase 2)
+langchain
+langchain-community
+langchain-huggingface
+langchain-chroma  # ChromaDB integration (replaces deprecated langchain_community.vectorstores.Chroma)
+chromadb  # Vector database for RAG
+pypdf  # PDF loading
+sentence-transformers  # Local embeddings (all-MiniLM-L6-v2)
+python-dotenv  # Environment variable management

@@ -1,0 +1,160 @@
+.prediction-display {
+  width: 100%;
+}
+
+.prediction-display h2 {
+  color: #667eea;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+}
+
+.prediction-card,
+.explanation-card {
+  background: #f9f9f9;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #667eea;
+}
+
+.diagnosis-header {
+  margin-bottom: 1.5rem;
+}
+
+.diagnosis-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.diagnosis-description {
+  color: #666;
+  font-size: 1rem;
+  margin: 0;
+  font-style: italic;
+}
+
+.diagnosis-header h3 {
+  color: #333;
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.diagnosis-badge {
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.confidence-bar {
+  margin-bottom: 1.5rem;
+}
+
+.confidence-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.confidence-value {
+  color: #333;
+  font-weight: bold;
+}
+
+.confidence-bar-container {
+  width: 100%;
+  height: 25px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.confidence-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 12px;
+}
+
+.probabilities {
+  margin-top: 1.5rem;
+}
+
+.probabilities h4 {
+  color: #333;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.probabilities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.probability-item {
+  display: grid;
+  grid-template-columns: 80px 1fr 60px;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.class-name {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.probability-bar-container {
+  width: 100%;
+  height: 20px;
+  background: #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.probability-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 10px;
+}
+
+.probability-value {
+  text-align: right;
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.explanation-card h3 {
+  color: #667eea;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+}
+
+.explanation-text {
+  color: #333;
+  line-height: 1.8;
+  font-size: 1rem;
+}
+
+.explanation-text p {
+  margin-bottom: 0.75rem;
+}
+
+.explanation-meta {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ddd;
+}
+
+.explanation-meta small {
+  color: #666;
+  font-style: italic;
+}

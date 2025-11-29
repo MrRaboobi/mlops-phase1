@@ -1,0 +1,26 @@
+.ecg-visualization {
+  width: 100%;
+}
+
+.ecg-chart-container {
+  margin-bottom: 2rem;
+}
+
+.ecg-chart-container h3 {
+  color: #667eea;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+}
+
+.ecg-info {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.ecg-info p {
+  margin: 0.5rem 0;
+  color: #666;
+}

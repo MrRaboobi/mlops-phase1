@@ -135,6 +135,8 @@ Prometheus is configured via `infra/prometheus/prometheus.yml` to scrape the `me
 | `make clean`  | pre-commit run --all-files                   |
 | `make check`  | Run dependency and license audit             |
 | `make train`  | Run model training pipeline                  |
+| `make ingest` | Ingest PDFs and create RAG vector database  |
+| `make rag`    | Alias for ingest - build RAG vector database|
 | `make evidently` | Start Evidently dashboard server (port 7000) |
 
 ## Deliverables Summary
@@ -154,6 +156,13 @@ Prometheus is configured via `infra/prometheus/prometheus.yml` to scrape the `me
 ### D4 – CI/CD Pipeline
 - Implemented GitHub Actions workflow (`.github/workflows/ci.yml`).
 - Automated linting, testing, and Docker image builds.
+
+### D2 (Milestone 2) – RAG Pipeline ✅
+- **Document Ingestion:** `src/ingest.py` - Loads PDFs, splits, embeds, stores in ChromaDB
+- **RAG Engine:** `src/rag_engine.py` - Retrieves context and generates patient-friendly explanations
+- **API Integration:** Enhanced `/predict` endpoint with RAG-generated explanations
+- **Architecture Diagram:** `docs/diagrams/rag_architecture.md` - Complete RAG flow visualization
+- **Reproducibility:** `make rag` target runs full pipeline end-to-end
 
 ### D5 – Monitoring & Observability
 

@@ -4,10 +4,14 @@ Handles lazy loading and caching of the model for API inference.
 """
 
 import os
+import warnings
 import mlflow
 import mlflow.xgboost
 import numpy as np
 from typing import Optional, List
+
+# Suppress MLflow deprecation warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="mlflow")
 
 # Global model cache
 _model: Optional[object] = None
@@ -74,40 +78,116 @@ def load_model_from_registry(
         mlflow.set_tracking_uri("file:./mlruns")
 
     try:
-        # Load model from registry
-        if stage:
-            model_uri = f"models:/{model_name}/{stage}"
-        else:
-            # Get latest version
-            model_uri = f"models:/{model_name}/latest"
+        # Try to load model from registry
+        # Strategy: Try latest version first, then specific stage if provided
+        model_loaded = False
+        errors = []
 
-        print(f"Loading model from: {model_uri}")
-        _model = mlflow.xgboost.load_model(model_uri)
-        print("✅ Model loaded successfully")
+        # First, try loading latest version (works even if no stage is set)
+        try:
+            model_uri = f"models:/{model_name}/latest"
+            # Suppress all output during model loading
+            import sys
+            from io import StringIO
+
+            old_stdout = sys.stdout
+            sys.stdout = StringIO()
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    _model = mlflow.xgboost.load_model(model_uri)
+            finally:
+                sys.stdout = old_stdout
+            model_loaded = True
+        except Exception as latest_error:
+            errors.append(f"Latest version: {latest_error}")
+
+            # If stage was specified, try that
+            if stage:
+                try:
+                    model_uri = f"models:/{model_name}/{stage}"
+                    import sys
+                    from io import StringIO
+
+                    old_stdout = sys.stdout
+                    sys.stdout = StringIO()
+                    try:
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore")
+                            _model = mlflow.xgboost.load_model(model_uri)
+                    finally:
+                        sys.stdout = old_stdout
+                    model_loaded = True
+                except Exception as stage_error:
+                    errors.append(f"{stage} stage: {stage_error}")
+
+        # If still not loaded, try loading by version number
+        if not model_loaded:
+            client = mlflow.tracking.MlflowClient()
+            try:
+                # Get all versions of the model
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    versions = client.search_model_versions(f"name='{model_name}'")
+                if versions:
+                    # Get the latest version by version number
+                    latest_version = sorted(
+                        versions, key=lambda v: int(v.version), reverse=True
+                    )[0]
+                    model_uri = f"models:/{model_name}/{latest_version.version}"
+                    import sys
+                    from io import StringIO
+
+                    old_stdout = sys.stdout
+                    sys.stdout = StringIO()
+                    try:
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore")
+                            _model = mlflow.xgboost.load_model(model_uri)
+                    finally:
+                        sys.stdout = old_stdout
+                    model_loaded = True
+                else:
+                    raise RuntimeError(f"No versions found for model '{model_name}'")
+            except Exception as run_error:
+                errors.append(f"Version number: {run_error}")
+                raise RuntimeError(
+                    f"Could not load model '{model_name}' from registry.\n"
+                    f"Tried: {', '.join(errors)}\n"
+                    f"Please ensure the model is trained and registered.\n"
+                    f"Run: python manage.py train"
+                ) from run_error
 
         # Try to load class names from artifacts
         try:
             # Get the latest run for this model
-            client = mlflow.tracking.MlflowClient()
-            model_version = client.get_latest_versions(
-                model_name, stages=[stage] if stage else None
-            )[0]
-            run_id = model_version.run_id
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                client = mlflow.tracking.MlflowClient()
+                model_version = client.get_latest_versions(
+                    model_name, stages=[stage] if stage else None
+                )[0]
+                run_id = model_version.run_id
 
-            # Download class_names.txt artifact
-            artifact_path = mlflow.artifacts.download_artifacts(
-                run_id=run_id, artifact_path="class_names.txt"
-            )
+            # Download class_names.txt artifact (suppress progress bar)
+            import sys
+            from io import StringIO
+
+            old_stdout = sys.stdout
+            sys.stdout = StringIO()
+            try:
+                artifact_path = mlflow.artifacts.download_artifacts(
+                    run_id=run_id, artifact_path="class_names.txt"
+                )
+            finally:
+                sys.stdout = old_stdout
 
             with open(artifact_path, "r") as f:
                 _class_names = [line.strip() for line in f.readlines()]
-            print(f"✅ Loaded class names: {_class_names}")
 
-        except Exception as e:
-            print(f"⚠️  Could not load class names from artifacts: {e}")
-            # Fallback to default class names
+        except Exception:
+            # Fallback to default class names (silently)
             _class_names = ["NORM", "MI", "STTC", "CD", "HYP"]
-            print(f"Using default class names: {_class_names}")
 
         return _model, _class_names
 
@@ -136,18 +216,29 @@ def get_model(raise_on_error: bool = True):
     if _model is None:
         # Try to load from environment variables or use defaults
         model_name = os.getenv("MLFLOW_MODEL_NAME", "heartsight_xgb_v1")
-        model_stage = os.getenv("MLFLOW_MODEL_STAGE", "Production")
         tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
 
         try:
+            # First try without stage (gets latest version)
             _model, _class_names = load_model_from_registry(
-                model_name=model_name, stage=model_stage, tracking_uri=tracking_uri
+                model_name=model_name, stage=None, tracking_uri=tracking_uri
             )
-        except Exception:
-            if raise_on_error:
-                raise
-            else:
-                return None, None
+        except Exception as e1:
+            # If that fails, try with Production stage
+            try:
+                _model, _class_names = load_model_from_registry(
+                    model_name=model_name, stage="Production", tracking_uri=tracking_uri
+                )
+            except Exception as e2:
+                if raise_on_error:
+                    raise RuntimeError(
+                        f"Could not load model. Tried latest version and Production stage.\n"
+                        f"Latest error: {e1}\n"
+                        f"Production error: {e2}\n"
+                        f"Please run: python manage.py train"
+                    ) from e2
+                else:
+                    return None, None
 
     return _model, _class_names
 

@@ -1,0 +1,88 @@
+.predicting-screen {
+  background: white;
+  border-radius: 12px;
+  padding: 4rem;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.predicting-content {
+  width: 100%;
+  max-width: 600px;
+}
+
+.spinner {
+  font-size: 4rem;
+  animation: spin 2s linear infinite;
+  margin-bottom: 2rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.predicting-content h2 {
+  color: #667eea;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.timer {
+  font-size: 1.3rem;
+  color: #667eea;
+  font-weight: 600;
+  margin: 1rem 0;
+}
+
+.predicting-description {
+  color: #666;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.steps-container {
+  text-align: left;
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  transition: all 0.3s;
+}
+
+.step-item.active {
+  color: #667eea;
+  font-weight: 500;
+}
+
+.step-item.pending {
+  color: #999;
+  opacity: 0.6;
+}
+
+.step-icon {
+  font-size: 1.5rem;
+  min-width: 2rem;
+}
+
+.step-name {
+  font-size: 1rem;
+}
+
+.predicting-hint {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  color: #999;
+  font-style: italic;
+}

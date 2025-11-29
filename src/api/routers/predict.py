@@ -4,11 +4,13 @@ import numpy as np
 from typing import List, Optional
 from src.utils.model_loader import predict_ecg_signal
 
+# RAG temporarily disabled - using simple explanations
+
 router = APIRouter()
 
 
 class ECGSignalInput(BaseModel):
-    """Input model for ECG signal prediction.
+    """Input model for ECG signal prediction with RAG explanation.
 
     The signal should be a 2D array where:
     - First dimension: time steps
@@ -17,6 +19,10 @@ class ECGSignalInput(BaseModel):
 
     signal: List[List[float]]  # Shape: (time_steps, 12)
     ecg_id: Optional[int] = None  # Optional patient ID for tracking
+    age: Optional[int] = None  # Patient age for personalized explanation
+    sex: Optional[str] = (
+        None  # Patient sex ("Male", "Female", or None) for personalized explanation
+    )
 
 
 class ECGSimpleInput(BaseModel):
@@ -38,9 +44,30 @@ def predict_ecg(input_data: ECGSignalInput):
         "ecg_id": 123  # optional
     }
     """
+    import time
+    from datetime import datetime
+
+    start_time = time.time()
+    request_id = f"req_{int(time.time() * 1000)}"
+
     try:
+        print("\n" + "=" * 60)
+        print(
+            f"🔍 PREDICTION REQUEST [{request_id}] at {datetime.now().strftime('%H:%M:%S')}"
+        )
+        print(
+            f"   Signal: {len(input_data.signal)} x {len(input_data.signal[0]) if input_data.signal else 0}"
+        )
+        print(f"   Patient Age: {input_data.age if input_data.age else 'Not provided'}")
+        print(f"   Patient Sex: {input_data.sex if input_data.sex else 'Not provided'}")
+        print(
+            "   📝 Note: Age/Sex are used for RAG explanations only, not ML model prediction"
+        )
+        print("=" * 60)
+
         # Convert to numpy array
         signal_array = np.array(input_data.signal)
+        print(f"📊 Signal converted: {signal_array.shape}")
 
         # Validate shape
         if len(signal_array.shape) != 2:
@@ -55,14 +82,57 @@ def predict_ecg(input_data: ECGSignalInput):
                 detail=f"Signal must have 12 channels. Got {signal_array.shape[1]} channels",
             )
 
-        # Get prediction
+        # Get prediction from XGBoost model
+        print("🤖 Running ML model...")
+        model_start = time.time()
         prediction = predict_ecg_signal(signal_array)
+        model_time = time.time() - model_start
+        predicted_class = prediction["predicted_class"]
+        print(
+            f"✅ Prediction: {predicted_class} (confidence: {prediction['confidence']:.1%}) in {model_time:.2f}s"
+        )
 
-        # Add metadata
+        # Generate RAG explanation
+        print("📚 Generating RAG explanation...")
+        rag_start = time.time()
+        try:
+            from src.rag_engine import get_explainer
+
+            explainer = get_explainer()
+            explanation_data = explainer.generate_explanation(
+                diagnosis=predicted_class,
+                age=input_data.age,
+                sex=input_data.sex,
+            )
+            rag_time = time.time() - rag_start
+            print(f"   ✅ RAG explanation generated in {rag_time:.2f}s")
+        except Exception as rag_error:
+            rag_time = time.time() - rag_start
+            print(f"   ⚠️  RAG failed ({rag_time:.2f}s): {rag_error}")
+            # Fallback to simple explanation
+            explanation_data = {
+                "explanation": f"Your ECG shows {predicted_class}. Please consult with a cardiologist for detailed interpretation and personalized treatment recommendations.",
+                "fallback": True,
+            }
+
+        # Combine prediction and explanation
+        total_time = time.time() - start_time
+        print("=" * 60)
+        print(f"✅ COMPLETE in {total_time:.2f}s - Prediction: {predicted_class}")
+        print("=" * 60 + "\n")
+
         result = {
             "ecg_id": input_data.ecg_id,
             "signal_shape": list(signal_array.shape),
-            **prediction,
+            "prediction": predicted_class,
+            "confidence": prediction["confidence"],
+            "probabilities": prediction["probabilities"],
+            "class_index": prediction["class_index"],
+            "explanation": explanation_data.get("explanation", ""),
+            "patient_metadata": {
+                "age": input_data.age,
+                "sex": input_data.sex,
+            },
         }
 
         return result
@@ -70,7 +140,12 @@ def predict_ecg(input_data: ECGSignalInput):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+        error_detail = str(e)
+        elapsed = time.time() - start_time
+        print("=" * 60)
+        print(f"❌ ERROR after {elapsed:.2f}s: {error_detail}")
+        print("=" * 60 + "\n")
+        raise HTTPException(status_code=500, detail=f"Prediction error: {error_detail}")
 
 
 @router.post("/predict/simple", tags=["Model"])

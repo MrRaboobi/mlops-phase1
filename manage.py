@@ -14,14 +14,16 @@ import sys
 import subprocess
 
 
-def run_command(cmd, description):
+def run_command(cmd, description, cwd=None):
     """Execute a shell command and handle errors."""
     print(f"\n{'='*60}")
     print(f"Running: {description}")
     print(f"Command: {cmd}")
+    if cwd:
+        print(f"Working Directory: {cwd}")
     print(f"{'='*60}\n")
 
-    result = subprocess.run(cmd, shell=True)
+    result = subprocess.run(cmd, shell=True, cwd=cwd)
     if result.returncode != 0:
         print(f"\n❌ Error: {description} failed with exit code {result.returncode}")
         sys.exit(1)
@@ -39,7 +41,7 @@ def main():
     commands = {
         "train": {"cmd": "python src/pipeline/train.py", "desc": "Training Pipeline"},
         "dev": {
-            "cmd": "uvicorn src.api.main:app --reload",
+            "cmd": "python -m uvicorn src.api.main:app --reload",
             "desc": "FastAPI Development Server",
         },
         "test": {"cmd": "pytest -v", "desc": "Test Suite"},
@@ -54,6 +56,24 @@ def main():
             "cmd": "python src/monitoring/evidently_server.py",
             "desc": "Start Evidently Dashboard Server (port 7000)",
         },
+        "ingest": {
+            "cmd": "python src/ingest.py",
+            "desc": "Ingest PDFs and create vector database for RAG",
+        },
+        "rag": {
+            "cmd": "python src/ingest.py",
+            "desc": "Alias for ingest - build RAG vector database",
+        },
+        "ui": {
+            "cmd": "npm run dev",
+            "desc": "Start React frontend development server (port 3000)",
+            "cwd": "ui",
+        },
+        "ui-build": {
+            "cmd": "npm run build",
+            "desc": "Build React frontend for production",
+            "cwd": "ui",
+        },
     }
 
     if command not in commands:
@@ -61,7 +81,9 @@ def main():
         print(__doc__)
         sys.exit(1)
 
-    run_command(commands[command]["cmd"], commands[command]["desc"])
+    cmd_info = commands[command]
+    cwd = cmd_info.get("cwd", None)
+    run_command(cmd_info["cmd"], cmd_info["desc"], cwd=cwd)
 
 
 if __name__ == "__main__":

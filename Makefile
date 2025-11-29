@@ -39,3 +39,9 @@ train:
 
 evidently:
 	python src/monitoring/evidently_server.py
+
+ingest:
+	python src/ingest.py
+
+rag:
+	python src/ingest.py
