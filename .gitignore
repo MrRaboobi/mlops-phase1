@@ -26,13 +26,7 @@ logs/
 # ==========================
 # Data and Models
 # ==========================
-data/
-datasets/
-models/
-artifacts/
-mlruns/
-outputs/
-checkpoints/
+
 
 # ==========================
 # IDEs and OS Files
