@@ -50,6 +50,8 @@ dist/
 .cache/
 pytest_cache/
 __pycache__/
+data/
+mlruns/
 
 # ==========================
 # Temporary / Generated Files
