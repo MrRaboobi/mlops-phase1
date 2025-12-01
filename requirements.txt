@@ -29,3 +29,9 @@ chromadb  # Vector database for RAG
 pypdf  # PDF loading
 sentence-transformers  # Local embeddings (all-MiniLM-L6-v2)
 python-dotenv  # Environment variable management
+
+google-generativeai  # Google Gemini API client
+rouge-score
+nltk
+streamlit
+python-multipart

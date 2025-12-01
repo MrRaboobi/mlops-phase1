@@ -195,11 +195,11 @@ Your explanation:
     # ------------------------------------------
     def _fallback(self, diagnosis, age, sex):
         fallback_map = {
-            "NORM": "Your ECG appears normal. This indicates healthy electrical activity in the heart.",
-            "MI": "Your ECG indicates a possible myocardial infarction (heart attack). Please seek urgent medical evaluation.",
-            "STTC": "Your ECG shows ST-T changes, which may indicate reduced blood flow to the heart.",
-            "CD": "Your ECG shows conduction abnormalities. Further cardiology evaluation is recommended.",
-            "HYP": "Your ECG suggests possible ventricular hypertrophy, which may be related to high blood pressure.",
+            "NORM": "A normal ECG means your heart rhythm and electrical pattern look healthy, with no major abnormalities.",
+            "MI": "Myocardial infarction or heart attack means a heart artery may be blocked, which can damage heart muscle and needs urgent care.",
+            "STTC": "ST-T changes suggest the heart's electrical pattern is altered, sometimes from reduced blood flow or other medical issues that need further tests.",
+            "CD": "Conduction disturbance means the electrical signal travels through the heart more slowly or irregularly, and may require monitoring or treatment.",
+            "HYP": "Hypertrophy means the heart muscle is thickened, often related to high blood pressure or long-standing strain on the heart.",
         }
         base = fallback_map.get(
             diagnosis,
