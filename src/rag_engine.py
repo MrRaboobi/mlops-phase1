@@ -4,6 +4,7 @@ Uses Chroma vector DB + Gemini 2.5 Flash to generate patient-friendly ECG explan
 """
 
 import os
+import time
 import warnings
 from pathlib import Path
 from typing import Optional, Dict
@@ -19,6 +20,16 @@ except ImportError:
     from langchain_community.vectorstores import Chroma
 
 from langchain_core.prompts import PromptTemplate
+
+from src.guardrails import apply_guardrails_to_output
+
+try:
+    from src.monitoring.prometheus_metrics import observe_llm_call
+except Exception:  # pragma: no cover - metrics optional
+
+    def observe_llm_call(*args, **kwargs):  # type: ignore[no-redef]
+        return None
+
 
 # Suppress noisy warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -174,10 +185,33 @@ Your explanation:
         )
 
         print("🤖 Calling Gemini 2.5 Flash... (This may take 5–10 seconds)")
+        llm_start = time.time()
         try:
             response = self.llm.generate_content(prompt)
-            explanation = response.text.strip()
-            print("   ✅ Explanation generated successfully.")
+            raw_explanation = response.text.strip()
+            llm_latency = time.time() - llm_start
+
+            # Approximate token usage: prompt + response word count
+            approx_tokens = len(prompt.split()) + len(raw_explanation.split())
+
+            # Apply output guardrails (e.g., block dosages)
+            guardrail_result = apply_guardrails_to_output(
+                text=raw_explanation, endpoint="rag_explanation"
+            )
+            explanation = guardrail_result.text
+
+            # Record LLM metrics (latency, tokens, cost=0 for now)
+            observe_llm_call(
+                endpoint="rag_explanation",
+                latency_seconds=llm_latency,
+                tokens=approx_tokens,
+                cost_usd=0.0,
+            )
+
+            print(
+                f"   ✅ Explanation generated successfully in {llm_latency:.2f}s "
+                f"({approx_tokens} approx. tokens)"
+            )
 
         except Exception as e:
             print(f"   ⚠️ Gemini API failed: {e}")

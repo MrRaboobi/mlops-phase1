@@ -8,6 +8,15 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict
 
 from src.rag_engine import get_explainer
+from src.guardrails import apply_guardrails_to_input, apply_guardrails_to_output
+
+try:
+    from src.monitoring.prometheus_metrics import observe_llm_call
+except Exception:  # pragma: no cover - metrics optional
+
+    def observe_llm_call(*args, **kwargs):  # type: ignore[no-redef]
+        return None
+
 
 router = APIRouter()
 
@@ -62,6 +71,14 @@ def chat_with_rag(request: ChatRequest) -> ChatResponse:
         print("=" * 60)
 
         # -----------------------------------------
+        # Step 0 — Input Guardrails
+        # -----------------------------------------
+        input_guardrails = apply_guardrails_to_input(
+            text=request.message, endpoint="chat"
+        )
+        sanitized_message = input_guardrails.text
+
+        # -----------------------------------------
         # Step 1 — Retrieve Relevant Context
         # -----------------------------------------
 
@@ -91,7 +108,7 @@ Relevant Medical Context (extracted from trusted medical guidelines):
 {context}
 
 Patient's Question:
-"{request.message}"
+"{sanitized_message}"
 
 Instructions for your reply:
 1. Respond in a warm, patient-friendly tone.
@@ -107,13 +124,36 @@ Your response:
         print("   🤖 Calling Gemini 2.5 Flash for chat response...")
 
         # -----------------------------------------
-        # Step 3 — Call Gemini LLM
+        # Step 3 — Call Gemini LLM + Guardrails
         # -----------------------------------------
+        import time
 
+        llm_start = time.time()
         try:
             response = explainer.llm.generate_content(prompt)
-            reply = response.text.strip()
-            print(f"   ✅ Gemini chat response generated ({len(reply)} chars)")
+            raw_reply = response.text.strip()
+            llm_latency = time.time() - llm_start
+
+            # Approximate token usage: prompt + response
+            approx_tokens = len(prompt.split()) + len(raw_reply.split())
+
+            # Apply output guardrails (dosage, toxicity, etc.)
+            output_guardrails = apply_guardrails_to_output(
+                text=raw_reply, endpoint="chat"
+            )
+            reply = output_guardrails.text
+
+            observe_llm_call(
+                endpoint="chat",
+                latency_seconds=llm_latency,
+                tokens=approx_tokens,
+                cost_usd=0.0,
+            )
+
+            print(
+                f"   ✅ Gemini chat response generated in {llm_latency:.2f}s "
+                f"({approx_tokens} approx. tokens)"
+            )
 
         except Exception as llm_error:
             raise RuntimeError(f"Gemini LLM failed: {llm_error}")
