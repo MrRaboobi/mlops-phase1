@@ -130,12 +130,98 @@ def compute_single_ecg_drift_score(
         return 0.0
 
 
-if __name__ == "__main__":
-    # Example usage for offline drift report generation
-    if not REFERENCE_FEATURES_PATH.exists():
-        build_reference_baseline(max_samples=500)
+def start_evidently_drift_dashboard(port: int = 7000, host: str = "0.0.0.0"):
+    """
+    Start an Evidently dashboard server for ECG drift monitoring.
 
-    # For demonstration we reuse a small subset of reference as "current"
-    ref = _load_reference_features()
-    current = ref.sample(min(100, len(ref)), random_state=42)
-    generate_ecg_drift_report(current_features=current)
+    This creates a FastAPI server that:
+    - Loads reference baseline from training data
+    - Accepts current ECG feature batches via API
+    - Generates and serves Evidently drift reports in real-time
+
+    Usage:
+        python -m src.monitoring.drift
+        # Then visit http://localhost:7000
+    """
+    try:
+        from fastapi import FastAPI, HTTPException
+        from fastapi.responses import HTMLResponse
+        import uvicorn
+    except ImportError:
+        print("Error: fastapi and uvicorn are required for the dashboard server.")
+        print("Install with: pip install fastapi uvicorn")
+        return
+
+    app = FastAPI(title="HEARTSIGHT ECG Drift Dashboard")
+
+    @app.get("/", response_class=HTMLResponse)
+    def get_drift_dashboard():
+        """Generate and return Evidently drift dashboard HTML for ECG features."""
+        try:
+            # Load reference baseline
+            reference_df = _load_reference_features()
+
+            # For demo: use a sample of reference as "current" (in production, this would come from API requests)
+            # In a real setup, you'd collect recent ECG features from your API/inference pipeline
+            current_df = reference_df.sample(
+                min(100, len(reference_df)), random_state=42
+            )
+
+            # Generate Evidently report
+            report = Report(
+                metrics=[
+                    DataDriftPreset(),
+                    DataDriftMetric(),
+                ]
+            )
+            report.run(reference_data=reference_df, current_data=current_df)
+
+            # Return HTML
+            html_content = report.get_html()
+            return HTMLResponse(content=html_content)
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error generating drift dashboard: {e}"
+            )
+
+    @app.get("/health")
+    def health_check():
+        """Health check endpoint."""
+        return {
+            "status": "healthy",
+            "service": "ecg-drift-dashboard",
+            "reference_baseline_exists": REFERENCE_FEATURES_PATH.exists(),
+        }
+
+    @app.post("/update-current")
+    def update_current_features(current_features: dict):
+        """
+        Update current features for drift monitoring (future enhancement).
+
+        In production, this endpoint would accept feature batches from your
+        inference pipeline and store them for comparison against the baseline.
+        """
+        # Placeholder for future implementation
+        return {"message": "Feature update endpoint (to be implemented)"}
+
+    print(f"Starting Evidently ECG Drift Dashboard on http://{host}:{port}")
+    print(f"Visit http://localhost:{port} to view the dashboard")
+    uvicorn.run(app, host=host, port=port)
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == "dashboard":
+        # Run dashboard server
+        start_evidently_drift_dashboard()
+    else:
+        # Default: Example usage for offline drift report generation
+        if not REFERENCE_FEATURES_PATH.exists():
+            build_reference_baseline(max_samples=500)
+
+        # For demonstration we reuse a small subset of reference as "current"
+        ref = _load_reference_features()
+        current = ref.sample(min(100, len(ref)), random_state=42)
+        generate_ecg_drift_report(current_features=current)

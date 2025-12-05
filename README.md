@@ -173,25 +173,133 @@ Prometheus is configured via `infra/prometheus/prometheus.yml` to scrape the `me
 - **Model Location:** `mlruns/models/heartsight_xgb_v1/version-1/`
 - **View MLflow UI:** Run `mlflow ui` and visit `http://localhost:5000`
 
-#### Evidently Dashboard
-- **Data Drift Dashboard:** Exposed at `http://localhost:7000`
+#### Evidently Dashboard (Legacy)
+- **Data Drift Dashboard:** Exposed at `http://localhost:7000` (via `evidently_server.py`)
 - **Report Generation:** Run `python src/monitoring/drift_dashboard.py` to generate HTML report
 - **Location:** `docs/drift_report.html`
+- **Note:** For ECG-specific drift monitoring, use the new `src/monitoring/drift.py` dashboard (see below)
 
 #### Prometheus & Grafana
-- **Prometheus:** Scrapes metrics from `metrics` service (port 9090)
-- **Grafana:** Visualization dashboards (port 3000)
-- **Metrics Exporter:** `src/monitoring/prometheus_metrics.py` (port 9000)
-- **Metrics Collected:**
-  - API request count
-  - API request latency
-  - Model prediction count
-  - Error rates
 
-**Screenshots:**
+**Prometheus:**
+- Scrapes metrics from `metrics` service (port 9090)
+- Configuration: `infra/prometheus/prometheus.yml`
+- Access: `http://localhost:9090`
+
+**Grafana Dashboards:**
+- Access: `http://localhost:3000` (default login: `admin` / `admin`)
+- Pre-configured dashboard: `infra/grafana/dashboards/heartsight-llm-metrics.json`
+
+**Setting up Grafana Dashboard:**
+
+1. **Start the stack:**
+   ```bash
+   docker compose --profile dev up -d
+   ```
+
+2. **Access Grafana:**
+   - Open `http://localhost:3000`
+   - Login with `admin` / `admin` (change password on first login)
+
+3. **Add Prometheus Data Source:**
+   - Go to **Configuration → Data Sources → Add data source**
+   - Select **Prometheus**
+   - URL: `http://prometheus:9090`
+   - Click **Save & Test**
+
+4. **Import Pre-built Dashboard:**
+   - Go to **Dashboards → Import**
+   - Upload `infra/grafana/dashboards/heartsight-llm-metrics.json`
+   - Or paste the JSON content directly
+   - Select the Prometheus data source
+   - Click **Import**
+
+5. **Dashboard Panels Include:**
+   - **LLM Request Latency (p95)** - Latency percentiles by endpoint
+   - **LLM Token Usage Rate** - Tokens per second by endpoint
+   - **Guardrail Violations (Total)** - Violations broken down by endpoint and rule
+   - **LLM Cost (USD)** - Estimated cost tracking
+   - **LLM Latency by Endpoint (Average)** - Average latency stats
+   - **Total Guardrail Violations** - Overall violation count
+   - **LLM Requests (Total Count)** - Request volume
+   - **Guardrail Violations by Rule** - Bar chart of violations by rule type
+
+6. **Capture Screenshots:**
+   - After generating some traffic (use `/predict` and `/chat` endpoints), take screenshots of:
+     - The full dashboard view
+     - Individual panels showing metrics
+   - Save screenshots to `docs/grafana_dashboard.png` and `docs/grafana_llm_metrics.png`
+
+**Metrics Exporter:**
+- `src/monitoring/prometheus_metrics.py` (port 9000)
+- Metrics exposed: `http://localhost:9000/metrics`
+
+**Metrics Collected:**
+- `llm_request_latency_seconds{endpoint}` - LLM call latency histogram
+- `llm_tokens_total{endpoint}` - Approximate token usage
+- `llm_cost_usd_total{endpoint}` - Estimated cost (currently 0.0, ready for pricing integration)
+- `guardrail_violations_total{endpoint,stage,rule}` - Guardrail violation counts
+
+#### Evidently ECG Drift Dashboard
+
+**ECG Drift Monitoring:**
+- **Dashboard Server:** `src/monitoring/drift.py` (runs as `drift_dashboard` service)
+- **Access:** `http://localhost:7000` (when `drift_dashboard` service is running)
+- **Offline Reports:** `docs/ecg_drift_report.html`
+
+**Using the Drift Dashboard:**
+
+1. **Build Reference Baseline (one-time):**
+   ```bash
+   python -m src.monitoring.drift
+   ```
+   This creates `data/drift/reference_features.parquet` from your training data.
+
+2. **Start Drift Dashboard Service:**
+   ```bash
+   docker compose --profile dev up -d drift_dashboard
+   ```
+   Or run manually:
+   ```bash
+   python -m src.monitoring.drift dashboard
+   ```
+
+3. **View Dashboard:**
+   - Open `http://localhost:7000` in your browser
+   - The dashboard shows:
+     - Feature distribution comparisons (reference vs current)
+     - Drift detection results per feature
+     - Statistical tests (KS test, etc.)
+     - Visualizations of feature distributions
+
+4. **Generate Offline Report:**
+   ```python
+   from src.monitoring.drift import generate_ecg_drift_report
+   import pandas as pd
+
+   # Load current batch of ECG features (e.g., from recent API requests)
+   current_features = pd.DataFrame(...)  # Same schema as training features
+
+   generate_ecg_drift_report(
+       current_features=current_features,
+       output_html="docs/ecg_drift_report.html"
+   )
+   ```
+
+5. **Capture Screenshots:**
+   - Open `docs/ecg_drift_report.html` in a browser
+   - Take screenshots of:
+     - Overall drift summary
+     - Feature-by-feature drift analysis
+     - Distribution comparisons
+   - Save to `docs/evidently_drift_dashboard.png`
+
+**Screenshots for README:**
 - MLflow Tracking: `docs/mlflow_tracking.png`
 - Prometheus Metrics: `docs/prometheus_metrics.png`
-- Drift Report: `docs/drift_report.png`
+- Grafana Dashboard: `docs/grafana_dashboard.png`
+- Evidently Drift Dashboard: `docs/evidently_drift_dashboard.png`
+- ECG Drift Report: `docs/ecg_drift_report.png`
 
 ### D6 – Code Quality & Pre-commit Hooks
 - Configured `.pre-commit-config.yaml` for linting, formatting, and security scanning.

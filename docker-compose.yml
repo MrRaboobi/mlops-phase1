@@ -59,6 +59,25 @@ services:
     container_name: heartsight_grafana
     ports:
       - "3000:3000"
+    volumes:
+      - ./infra/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=
+    profiles: ["dev", "prod"]
+
+  drift_dashboard:
+    image: heartsight/app:latest
+    container_name: heartsight_drift_dashboard
+    working_dir: /app
+    command: ["python", "-m", "src.monitoring.drift", "dashboard"]
+    ports:
+      - "7000:7000"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - app
     profiles: ["dev", "prod"]
 
   db:
@@ -69,3 +88,6 @@ services:
     ports:
       - "5432:5432"
     profiles: ["dev", "test", "prod"]
+
+volumes:
+  grafana_data:
