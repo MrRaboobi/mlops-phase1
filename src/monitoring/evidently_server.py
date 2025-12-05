@@ -53,10 +53,81 @@ def get_drift_dashboard():
     reference_data, current_data = load_data()
 
     report = Report(metrics=[DataDriftPreset()])
-    report.run(reference_data=reference_data, current_data=current_data)
+    report_result = report.run(reference_data=reference_data, current_data=current_data)
 
-    # Get HTML content
-    html_content = report.get_html()
+    # Try different methods to get HTML based on Evidently version
+    html_content = None
+
+    # Method 1: Try save_html (works in some versions)
+    try:
+        import os
+        from pathlib import Path
+
+        temp_dir = Path("/tmp")
+        temp_dir.mkdir(exist_ok=True)
+        temp_path = temp_dir / "evidently_dashboard.html"
+
+        # Try save_html method
+        if hasattr(report, "save_html"):
+            report.save_html(str(temp_path))
+            with open(temp_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            os.unlink(temp_path)
+    except (AttributeError, Exception) as e:
+        print(f"save_html method not available: {e}")
+
+    # Method 2: Try get_html (works in some versions)
+    if html_content is None:
+        try:
+            if hasattr(report, "get_html"):
+                html_content = report.get_html()
+        except (AttributeError, Exception) as e:
+            print(f"get_html method not available: {e}")
+
+    # Method 3: Try show() method
+    if html_content is None:
+        try:
+            if hasattr(report, "show"):
+                html_content = report.show()
+        except (AttributeError, Exception) as e:
+            print(f"show method not available: {e}")
+
+    # Fallback: Generate simple HTML from report data
+    if html_content is None:
+        try:
+            # Get report data for display (if available)
+            _ = report_result.as_dict() if hasattr(report_result, "as_dict") else {}
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>HEARTSIGHT ECG Drift Dashboard</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                    h1 {{ color: #2c3e50; }}
+                    .info {{ background: #ecf0f1; padding: 20px; border-radius: 5px; }}
+                    .metric {{ margin: 10px 0; padding: 10px; background: white; border-left: 4px solid #3498db; }}
+                </style>
+            </head>
+            <body>
+                <h1>❤️ HEARTSIGHT ECG Drift Dashboard</h1>
+                <div class="info">
+                    <h2>Data Drift Monitoring</h2>
+                    <p><strong>Reference Data:</strong> {len(reference_data)} samples</p>
+                    <p><strong>Current Data:</strong> {len(current_data)} samples</p>
+                    <p><strong>Features Monitored:</strong> {', '.join(reference_data.columns.tolist()[:10])}</p>
+                    <div class="metric">
+                        <h3>Note:</h3>
+                        <p>Full Evidently HTML report generation requires compatible Evidently version.</p>
+                        <p>For full dashboard, use: <code>python -m src.monitoring.drift</code> to generate offline report.</p>
+                        <p>Report will be saved to: <code>docs/ecg_drift_report.html</code></p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+        except Exception as e:
+            html_content = f"<html><body><h1>Error</h1><p>{str(e)}</p></body></html>"
 
     return HTMLResponse(content=html_content)
 

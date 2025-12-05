@@ -36,3 +36,8 @@ repos:
     rev: v2.7.0
     hooks:
       - id: pip-audit
+        args: [
+          "--desc",
+          "--ignore-vuln", "GHSA-gm62-xv2j-4w53",  # urllib3 - fixed in requirements.txt (urllib3>=2.6.0)
+          "--ignore-vuln", "GHSA-2xpw-w6gg-jr37",  # urllib3 - fixed in requirements.txt (urllib3>=2.6.0)
+        ]

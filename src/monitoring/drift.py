@@ -18,8 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from evidently import Report
-from evidently.metrics import DataDriftMetric
-from evidently.metric_preset import DataDriftPreset
+from evidently.presets import DataDriftPreset
 
 
 DRIFT_DATA_DIR = Path("data/drift")
@@ -83,7 +82,6 @@ def generate_ecg_drift_report(
     report = Report(
         metrics=[
             DataDriftPreset(),
-            DataDriftMetric(),
         ]
     )
 
@@ -147,9 +145,9 @@ def start_evidently_drift_dashboard(port: int = 7000, host: str = "0.0.0.0"):
         from fastapi import FastAPI, HTTPException
         from fastapi.responses import HTMLResponse
         import uvicorn
-    except ImportError:
-        print("Error: fastapi and uvicorn are required for the dashboard server.")
-        print("Install with: pip install fastapi uvicorn")
+    except ImportError as e:
+        print(f"Error: Missing required dependencies for dashboard server: {e}")
+        print("Install with: pip install fastapi uvicorn sniffio")
         return
 
     app = FastAPI(title="HEARTSIGHT ECG Drift Dashboard")
@@ -171,7 +169,6 @@ def start_evidently_drift_dashboard(port: int = 7000, host: str = "0.0.0.0"):
             report = Report(
                 metrics=[
                     DataDriftPreset(),
-                    DataDriftMetric(),
                 ]
             )
             report.run(reference_data=reference_df, current_data=current_df)

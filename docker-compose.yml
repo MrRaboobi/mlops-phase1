@@ -71,7 +71,7 @@ services:
     image: heartsight/app:latest
     container_name: heartsight_drift_dashboard
     working_dir: /app
-    command: ["python", "-m", "src.monitoring.drift", "dashboard"]
+    command: ["python", "src/monitoring/evidently_server.py"]
     ports:
       - "7000:7000"
     volumes:
