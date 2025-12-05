@@ -18,13 +18,27 @@ services:
       retries: 3
     profiles: ["dev", "test", "prod"]
 
-  metrics:
-    image: python:3.11-slim
-    container_name: heartsight_metrics
+  ui:
+    image: node:20-alpine
+    container_name: heartsight_ui
     working_dir: /app
     volumes:
-      - .:/app
-    command: bash -lc "pip install --no-cache-dir -r requirements.txt && python src/monitoring/prometheus_metrics.py"
+      - ./ui:/app
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - app
+    profiles:
+      - dev
+
+  metrics:
+    image: heartsight/app:latest
+    container_name: heartsight_metrics
+    working_dir: /app
+    command: ["python", "src/monitoring/prometheus_metrics.py"]
     ports:
       - "9000:9000"
     profiles: ["dev", "prod"]
