@@ -14,6 +14,12 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Build argument for API URL
+# Note: Browser makes API calls, so use localhost:8000 for Docker Compose
+# For AWS deployment, this can be overridden with the actual backend URL
+ARG VITE_API_URL=http://localhost:8000
+ENV VITE_API_URL=$VITE_API_URL
+
 # Build the application
 RUN npm run build
 

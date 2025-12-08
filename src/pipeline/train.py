@@ -16,9 +16,13 @@ SIGNAL_FILE = os.path.join(DATA_PATH, "train_signal.csv")
 
 MLFLOW_EXPERIMENT_NAME = "Heartsight_Phase1_Baseline"
 
-# Setup MLflow tracking URI (use file-based for local development)
-os.makedirs("mlruns", exist_ok=True)
-mlflow.set_tracking_uri("file:./mlruns")
+# Setup MLflow tracking URI (use environment variable or default to file-based)
+mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
+mlflow.set_tracking_uri(mlflow_tracking_uri)
+
+# For file-based tracking, ensure directory exists
+if mlflow_tracking_uri.startswith("file:"):
+    os.makedirs("mlruns", exist_ok=True)
 
 
 def extract_features_from_signal(signal_array):
@@ -89,53 +93,107 @@ def load_and_process_data():
     meta_df["target_encoded"] = le.fit_transform(meta_df["target"])
 
     print("Loading Signal Data (This may take a moment)...")
-    # Process data in chunks to avoid memory issues
-    print("Processing signal data in chunks (memory-efficient)...")
+    # Process data in chunks to avoid memory issues - extract features on-the-fly
+    print(
+        "Processing signal data in chunks (memory-efficient, on-the-fly feature extraction)..."
+    )
 
     # Get unique ECG IDs from metadata
     meta_df = meta_df.sort_values("ecg_id")
-    ecg_ids = meta_df["ecg_id"].values
 
-    # Create a dictionary to store signals for each ECG ID
-    ecg_signals = {}
+    # Create a mapping from ecg_id to label for quick lookup
+    ecg_to_label = dict(zip(meta_df["ecg_id"], meta_df["target_encoded"]))
 
-    # Read CSV in chunks and group by ecg_id
-    chunk_size = 50000
-    print(f"Reading signal file in chunks of {chunk_size} rows...")
-    for chunk_num, chunk in enumerate(pd.read_csv(SIGNAL_FILE, chunksize=chunk_size)):
-        if chunk_num % 10 == 0:
-            print(f"  Processed chunk {chunk_num}...")
-
-        # Group by ecg_id within this chunk
-        for ecg_id, group in chunk.groupby("ecg_id"):
-            if ecg_id not in ecg_signals:
-                ecg_signals[ecg_id] = []
-            # Store the signal data (drop ecg_id column)
-            ecg_signals[ecg_id].append(group.drop(columns=["ecg_id"]).values)
-
-    # Combine chunks for each ECG ID
-    print("Combining chunks for each ECG ID...")
-    for ecg_id in ecg_signals:
-        ecg_signals[ecg_id] = np.vstack(ecg_signals[ecg_id])
-
-    # Extract aligned features
-    print("Extracting features from signals...")
+    # Process features on-the-fly to avoid storing all signals in memory
     aligned_features = []
     aligned_labels = []
+    current_ecg_id = None
+    current_signal_chunks = []
+    processed_count = 0
 
-    for ecg_id in ecg_ids:
-        if ecg_id in ecg_signals:
-            signal_array = ecg_signals[ecg_id]  # Shape: (TimeSteps, 12)
+    # Read CSV in chunks and process on-the-fly
+    # Use smaller chunks to reduce memory pressure
+    chunk_size = 50000
+    print(f"Reading signal file in chunks of {chunk_size} rows...")
+    print("   Processing features on-the-fly to minimize memory usage...")
 
-            # Extract features from signal
+    def process_complete_signal(ecg_id, signal_chunks):
+        """Process a complete signal and extract features."""
+        if not signal_chunks:
+            return None
+        try:
+            # Combine all chunks for this ECG ID
+            signal_array = np.vstack(signal_chunks)  # Shape: (TimeSteps, 12)
+            # Extract features immediately
             features = extract_features_from_signal(signal_array)
-            aligned_features.append(features)
+            return features
+        except MemoryError:
+            print(f"   ⚠️  Memory error processing ECG {ecg_id}, skipping...")
+            return None
 
-            # Get label
-            label = meta_df[meta_df["ecg_id"] == ecg_id]["target_encoded"].values[0]
-            aligned_labels.append(label)
-        else:
-            print(f"Warning: ECG ID {ecg_id} not found in signal data, skipping...")
+    chunk_num = 0
+    try:
+        for chunk in pd.read_csv(SIGNAL_FILE, chunksize=chunk_size):
+            if chunk_num % 10 == 0:
+                print(
+                    f"  Processed chunk {chunk_num}... (processed {len(aligned_features)} ECG signals so far)"
+                )
+
+            # Group by ecg_id within this chunk
+            for ecg_id, group in chunk.groupby("ecg_id"):
+                signal_data = group.drop(columns=["ecg_id"]).values
+
+                if ecg_id != current_ecg_id:
+                    # Process previous ECG signal if we have one
+                    if current_ecg_id is not None and current_ecg_id in ecg_to_label:
+                        features = process_complete_signal(
+                            current_ecg_id, current_signal_chunks
+                        )
+                        if features is not None:
+                            aligned_features.append(features)
+                            aligned_labels.append(ecg_to_label[current_ecg_id])
+                            processed_count += 1
+                            if processed_count % 100 == 0:
+                                print(f"   Processed {processed_count} ECG signals...")
+
+                    # Start new ECG signal
+                    current_ecg_id = ecg_id
+                    current_signal_chunks = [signal_data]
+                else:
+                    # Continue accumulating signal for current ECG ID
+                    current_signal_chunks.append(signal_data)
+
+            chunk_num += 1
+
+            # Periodically clear memory and show progress
+            if chunk_num % 20 == 0:
+                import gc
+
+                gc.collect()
+                print(
+                    f"   Memory cleared after chunk {chunk_num} ({processed_count} signals processed)"
+                )
+
+        # Process the last ECG signal
+        if current_ecg_id is not None and current_ecg_id in ecg_to_label:
+            features = process_complete_signal(current_ecg_id, current_signal_chunks)
+            if features is not None:
+                aligned_features.append(features)
+                aligned_labels.append(ecg_to_label[current_ecg_id])
+                processed_count += 1
+
+        print(f"\n✅ Data loading complete: {processed_count} ECG signals processed")
+
+    except MemoryError as e:
+        print(f"\n❌ Memory error during data loading: {e}")
+        print(f"   Processed {processed_count} signals before running out of memory.")
+        print("   Solutions:")
+        print(
+            "   1. Increase Docker memory limit (Docker Desktop -> Settings -> Resources -> Memory)"
+        )
+        print("   2. Use a smaller training dataset")
+        print("   3. Train on a machine with more RAM")
+        raise
 
     X = np.array(
         aligned_features
@@ -172,9 +230,12 @@ def main():
 
     try:
         X, y, class_names = load_and_process_data()
+    except (MemoryError, OSError) as e:
+        print(f"\n❌ Error loading data: {e}")
+        raise  # Re-raise to be caught by caller
     except Exception as e:
-        print(f"Error: {e}")
-        return
+        print(f"\n❌ Error: {e}")
+        raise  # Re-raise to be caught by caller
 
     # 2. Split Data
     X_train, X_test, y_train, y_test = train_test_split(

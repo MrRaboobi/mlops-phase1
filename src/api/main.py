@@ -38,14 +38,18 @@ app = FastAPI(
 )
 
 # Add CORS middleware for frontend
+# Allow requests from frontend container and local development
 app.add_middleware(
     CORSMiddleware,
-    # Allow common local/dev origins. Add more if you access via another host/IP.
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
+        "http://frontend:80",  # Frontend container service name
+        "http://heartsight_frontend:80",  # Frontend container name
+        # For production/AWS, you may want to use environment variables
+        # or allow all origins in development: ["*"]
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -82,8 +86,71 @@ async def startup_event():
     except Exception as e:
         print(f"⚠️  Could not start Prometheus metrics: {e}")
 
-    try:
+    # Check if model exists, if not, train automatically
+    model_name = os.getenv("MLFLOW_MODEL_NAME", "heartsight_xgb_v1")
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
 
+    from src.utils.model_loader import model_exists_in_registry
+
+    try:
+        model_exists = model_exists_in_registry(
+            model_name=model_name, tracking_uri=tracking_uri
+        )
+
+        if not model_exists:
+            print("=" * 60)
+            print("⚠️  Model not found in registry.")
+            print("🚀 Starting automatic training...")
+            print("   This may take several minutes. Please wait...")
+            print("=" * 60)
+
+            # Import and run training synchronously
+            training_success = False
+            try:
+                from src.pipeline.train import main as train_main
+
+                # Run training (this will block until complete)
+                train_main()
+                training_success = True
+
+            except (MemoryError, OSError) as mem_error:
+                print("=" * 60)
+                print(f"❌ Training failed due to memory error: {mem_error}")
+                print("   The dataset is too large for available memory.")
+                print("   Solutions:")
+                print(
+                    "   1. Increase Docker memory limit (Docker Desktop -> Settings -> Resources)"
+                )
+                print("   2. Use a smaller training dataset")
+                print("   3. Train manually with: python manage.py train")
+                print("=" * 60)
+            except FileNotFoundError as data_error:
+                print("=" * 60)
+                print(f"❌ Training data not found: {data_error}")
+                print("   Please ensure training data exists in data/raw/")
+                print("=" * 60)
+            except Exception as train_error:
+                print("=" * 60)
+                print(f"❌ Training failed: {train_error}")
+                print("   You can try training manually: python manage.py train")
+                print("=" * 60)
+
+            if training_success:
+                print("=" * 60)
+                print("✅ Training completed successfully!")
+                print("   Loading model into memory...")
+                print("=" * 60)
+
+                # Clear model cache to force reload
+                import src.utils.model_loader as model_loader_module
+
+                model_loader_module._model = None
+                model_loader_module._class_names = None
+    except Exception as check_error:
+        print(f"⚠️  Could not check model registry: {check_error}")
+
+    # Try to load the model
+    try:
         # Suppress all output during model loading
         import sys
         from io import StringIO
@@ -101,7 +168,10 @@ async def startup_event():
             print("✅ API Ready! Listening on http://127.0.0.1:8000")
             print("=" * 60)
         else:
-            print("⚠️  Model not found. Train first: python manage.py train")
+            print(
+                "⚠️  Model not loaded. It may still be training or needs manual training."
+            )
+            print("   Run: python manage.py train")
     except Exception as e:
         print(f"⚠️  Model will load on first request: {e}")
 

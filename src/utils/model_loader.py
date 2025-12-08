@@ -201,6 +201,35 @@ def load_model_from_registry(
         raise RuntimeError(error_msg) from e
 
 
+def model_exists_in_registry(
+    model_name: str = "heartsight_xgb_v1",
+    tracking_uri: Optional[str] = None,
+) -> bool:
+    """
+    Check if a model exists in the MLflow registry.
+
+    Args:
+        model_name: Name of the registered model
+        tracking_uri: MLflow tracking URI (defaults to file:./mlruns)
+
+    Returns:
+        True if model exists, False otherwise
+    """
+    try:
+        if tracking_uri:
+            mlflow.set_tracking_uri(tracking_uri)
+        else:
+            mlflow.set_tracking_uri("file:./mlruns")
+
+        client = mlflow.tracking.MlflowClient()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            versions = client.search_model_versions(f"name='{model_name}'")
+        return len(versions) > 0
+    except Exception:
+        return False
+
+
 def get_model(raise_on_error: bool = True):
     """
     Get the cached model, loading it if necessary.
