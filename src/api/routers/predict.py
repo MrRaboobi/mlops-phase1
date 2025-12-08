@@ -3,6 +3,8 @@ from pydantic import BaseModel
 import numpy as np
 from typing import List, Optional
 from src.utils.model_loader import predict_ecg_signal
+from src.monitoring.prometheus_metrics import record_prediction, set_data_drift_score
+from src.monitoring.evidently_monitor import get_drift_monitor
 
 # RAG temporarily disabled - using simple explanations
 
@@ -120,6 +122,44 @@ def predict_ecg(input_data: ECGSignalInput):
         print("=" * 60)
         print(f"✅ COMPLETE in {total_time:.2f}s - Prediction: {predicted_class}")
         print("=" * 60 + "\n")
+
+        # Record metrics to Prometheus
+        try:
+            record_prediction(
+                predicted_class=predicted_class,
+                confidence=prediction["confidence"],
+                model_latency=model_time,
+                rag_latency=rag_time,
+                status="success",
+            )
+        except Exception as metrics_error:
+            print(f"⚠️  Warning: Failed to record metrics: {metrics_error}")
+
+        # Check for data drift using Evidently
+        try:
+            drift_monitor = get_drift_monitor()
+            drift_report = drift_monitor.check_drift(
+                current_signals=[input_data.signal],
+                current_predictions=[predicted_class],
+                current_confidences=[prediction["confidence"]],
+            )
+            drift_score = drift_report.get("drift_score", 0.0)
+
+            # Record drift score to Prometheus
+            set_data_drift_score(drift_score)
+
+            if drift_report.get("drift_detected"):
+                print(f"⚠️  DATA DRIFT DETECTED! Score: {drift_score:.2f}")
+                print(
+                    f"   Drifted features: {drift_report.get('num_drifted_features', 0)}"
+                )
+                print(f"   Report: {drift_report.get('report_path', 'N/A')}")
+            else:
+                print(
+                    f"✅ Data drift check: No drift detected (score: {drift_score:.2f})"
+                )
+        except Exception as drift_error:
+            print(f"⚠️  Warning: Drift monitoring failed: {drift_error}")
 
         result = {
             "ecg_id": input_data.ecg_id,

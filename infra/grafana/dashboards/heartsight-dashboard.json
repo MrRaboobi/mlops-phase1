@@ -1,0 +1,148 @@
+{
+  "dashboard": {
+    "title": "HEARTSIGHT MLOps Monitoring",
+    "description": "Real-time monitoring of ECG model predictions, LLM usage, and system health",
+    "tags": ["heartsight", "mlops", "ecg"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Prediction Volume (Total Requests)",
+        "targets": [
+          {
+            "expr": "increase(prediction_requests_total[5m])",
+            "legendFormat": "{{ status }}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 2,
+        "title": "Prediction Latency (Model Only)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, model_prediction_latency_seconds_bucket)",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, model_prediction_latency_seconds_bucket)",
+            "legendFormat": "p50"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 3,
+        "title": "Prediction Class Distribution",
+        "targets": [
+          {
+            "expr": "increase(prediction_class_distribution_total[1h])",
+            "legendFormat": "{{ predicted_class }}"
+          }
+        ],
+        "type": "piechart"
+      },
+      {
+        "id": 4,
+        "title": "Average Prediction Confidence",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, prediction_confidence_bucket)"
+          }
+        ],
+        "type": "stat"
+      },
+      {
+        "id": 5,
+        "title": "Data Drift Score (Evidently)",
+        "targets": [
+          {
+            "expr": "data_drift_score"
+          }
+        ],
+        "type": "gauge",
+        "thresholds": "0,0.5,1"
+      },
+      {
+        "id": 6,
+        "title": "LLM Token Usage (Total)",
+        "targets": [
+          {
+            "expr": "increase(llm_tokens_total[1h])",
+            "legendFormat": "{{ endpoint }}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 7,
+        "title": "LLM Cost (USD)",
+        "targets": [
+          {
+            "expr": "increase(llm_cost_usd_total[1h])",
+            "legendFormat": "{{ endpoint }}"
+          }
+        ],
+        "type": "stat"
+      },
+      {
+        "id": 8,
+        "title": "RAG Explanation Latency",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rag_latency_seconds_bucket)",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rag_latency_seconds_bucket)",
+            "legendFormat": "p50"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 9,
+        "title": "Total Errors",
+        "targets": [
+          {
+            "expr": "increase(errors_total[5m])",
+            "legendFormat": "{{ error_type }}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 10,
+        "title": "API Request Rate",
+        "targets": [
+          {
+            "expr": "rate(api_requests_total[1m])",
+            "legendFormat": "{{ method }} {{ endpoint }}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 11,
+        "title": "API Response Time p95",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, api_latency_seconds_bucket)",
+            "legendFormat": "{{ endpoint }}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 12,
+        "title": "Chat Messages Volume",
+        "targets": [
+          {
+            "expr": "increase(chat_messages_total[1h])"
+          }
+        ],
+        "type": "stat"
+      }
+    ]
+  }
+}

@@ -1,13 +1,14 @@
 """
-Prometheus metrics exporter for HEARTSIGHT.
+Prometheus metrics exporter for HEARTSIGHT MLOps pipeline.
 
-In Phase 4 we track:
-- LLM latency
-- Token usage
-- Approximate cost
-- Guardrail violations (input/output)
+Tracks:
+- ECG Prediction metrics (latency, accuracy, distribution)
+- Model performance (predictions per class)
+- RAG/LLM metrics (latency, token usage, cost)
+- Data drift indicators
+- System health (requests, errors, uptime)
 
-This module is safe to import from the API / RAG / guardrails code.
+This module is safe to import from the API / RAG / model components.
 The `start_prometheus_metrics` function is used by the dedicated
 `metrics` service in docker-compose to expose metrics on port 9000.
 """
@@ -20,12 +21,46 @@ from typing import Optional
 from prometheus_client import (
     Counter,
     Histogram,
+    Gauge,
     start_http_server,
 )
 
 
 # ---------------------------------------------------------
-# Metric Definitions
+# ECG PREDICTION METRICS
+# ---------------------------------------------------------
+
+PREDICTION_REQUESTS_TOTAL = Counter(
+    "prediction_requests_total",
+    "Total number of prediction requests",
+    ["status"],  # success, error, invalid_input
+)
+
+PREDICTION_LATENCY_SECONDS = Histogram(
+    "prediction_latency_seconds",
+    "Latency of ECG predictions (seconds)",
+    ["stage"],  # model, rag, total
+)
+
+PREDICTION_CLASS_DISTRIBUTION = Counter(
+    "prediction_class_distribution_total",
+    "Distribution of predicted classes",
+    ["predicted_class"],  # NORM, MI, STTC, CD, HYP
+)
+
+PREDICTION_CONFIDENCE = Histogram(
+    "prediction_confidence",
+    "Confidence scores of predictions",
+    buckets=(0.1, 0.3, 0.5, 0.7, 0.9, 0.95, 0.99),
+)
+
+MODEL_PREDICTION_LATENCY = Histogram(
+    "model_prediction_latency_seconds",
+    "XGBoost model inference latency",
+)
+
+# ---------------------------------------------------------
+# LLM & RAG METRICS
 # ---------------------------------------------------------
 
 LLM_LATENCY_SECONDS = Histogram(
@@ -46,23 +81,102 @@ LLM_COST_USD_TOTAL = Counter(
     ["endpoint"],
 )
 
+RAG_EXPLANATIONS_GENERATED = Counter(
+    "rag_explanations_generated_total",
+    "Total RAG explanations generated",
+)
+
+RAG_LATENCY_SECONDS = Histogram(
+    "rag_latency_seconds",
+    "Latency of RAG explanation generation",
+)
+
+CHAT_MESSAGES_TOTAL = Counter(
+    "chat_messages_total",
+    "Total chat messages processed",
+)
+
+# ---------------------------------------------------------
+# DATA DRIFT & MODEL MONITORING
+# ---------------------------------------------------------
+
+MODEL_VERSION = Gauge(
+    "model_version",
+    "Current model version number",
+)
+
+DATA_DRIFT_SCORE = Gauge(
+    "data_drift_score",
+    "Evidently data drift score (0-1)",
+)
+
 GUARDRAIL_VIOLATIONS_TOTAL = Counter(
     "guardrail_violations_total",
     "Number of guardrail violations detected",
     ["endpoint", "stage", "rule"],
 )
 
+# ---------------------------------------------------------
+# SYSTEM HEALTH METRICS
+# ---------------------------------------------------------
+
+API_REQUESTS_TOTAL = Counter(
+    "api_requests_total",
+    "Total API requests",
+    ["method", "endpoint", "status"],
+)
+
+API_LATENCY_SECONDS = Histogram(
+    "api_latency_seconds",
+    "API request latency",
+    ["endpoint"],
+)
+
+ERRORS_TOTAL = Counter(
+    "errors_total",
+    "Total errors by type",
+    ["error_type"],
+)
+
+ACTIVE_PREDICTIONS = Gauge(
+    "active_predictions_current",
+    "Currently active predictions",
+)
 
 # ---------------------------------------------------------
-# Public recording helpers
+# Recording Helpers
 # ---------------------------------------------------------
 
 
-def observe_llm_call(
+def record_prediction(
+    *,
+    predicted_class: str,
+    confidence: float,
+    model_latency: float,
+    rag_latency: float = 0.0,
+    status: str = "success",
+) -> None:
+    """Record a complete prediction with all metrics."""
+    try:
+        PREDICTION_REQUESTS_TOTAL.labels(status=status).inc()
+        PREDICTION_CLASS_DISTRIBUTION.labels(predicted_class=predicted_class).inc()
+        PREDICTION_CONFIDENCE.observe(confidence)
+        MODEL_PREDICTION_LATENCY.observe(model_latency)
+        if rag_latency > 0:
+            RAG_LATENCY_SECONDS.observe(rag_latency)
+            PREDICTION_LATENCY_SECONDS.labels(stage="rag").observe(rag_latency)
+        PREDICTION_LATENCY_SECONDS.labels(stage="model").observe(model_latency)
+        PREDICTION_LATENCY_SECONDS.labels(stage="total").observe(
+            model_latency + rag_latency
+        )
+    except Exception:
+        pass
+
+
+def record_llm_call(
     *, endpoint: str, latency_seconds: float, tokens: int, cost_usd: float = 0.0
 ) -> None:
     """Record a single LLM call in Prometheus metrics."""
-
     label = {"endpoint": endpoint}
     try:
         LLM_LATENCY_SECONDS.labels(**label).observe(latency_seconds)
@@ -70,17 +184,65 @@ def observe_llm_call(
         if cost_usd > 0:
             LLM_COST_USD_TOTAL.labels(**label).inc(cost_usd)
     except Exception:
-        # Metrics are best-effort; never break business logic
+        pass
+
+
+def record_rag_explanation(latency_seconds: float) -> None:
+    """Record RAG explanation generation."""
+    try:
+        RAG_EXPLANATIONS_GENERATED.inc()
+        RAG_LATENCY_SECONDS.observe(latency_seconds)
+    except Exception:
+        pass
+
+
+def record_chat_message() -> None:
+    """Record a chat message."""
+    try:
+        CHAT_MESSAGES_TOTAL.inc()
+    except Exception:
         pass
 
 
 def record_guardrail_event(*, endpoint: str, stage: str, rule: str) -> None:
-    """Increment guardrail violations counter from guardrails module."""
-
+    """Increment guardrail violations counter."""
     try:
         GUARDRAIL_VIOLATIONS_TOTAL.labels(
             endpoint=endpoint, stage=stage, rule=rule
         ).inc()
+    except Exception:
+        pass
+
+
+def set_model_version(version: int) -> None:
+    """Set the current model version."""
+    try:
+        MODEL_VERSION.set(version)
+    except Exception:
+        pass
+
+
+def set_data_drift_score(score: float) -> None:
+    """Update data drift score from Evidently."""
+    try:
+        DATA_DRIFT_SCORE.set(score)
+    except Exception:
+        pass
+
+
+def record_api_request(method: str, endpoint: str, status: int, latency: float) -> None:
+    """Record API request metrics."""
+    try:
+        API_REQUESTS_TOTAL.labels(method=method, endpoint=endpoint, status=status).inc()
+        API_LATENCY_SECONDS.labels(endpoint=endpoint).observe(latency)
+    except Exception:
+        pass
+
+
+def record_error(error_type: str) -> None:
+    """Record an error occurrence."""
+    try:
+        ERRORS_TOTAL.labels(error_type=error_type).inc()
     except Exception:
         pass
 

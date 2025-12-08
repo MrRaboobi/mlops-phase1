@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import os
 import warnings
 import logging
+from src.utils.model_loader import get_model
 
 load_dotenv()
 
@@ -62,12 +63,26 @@ if STORAGE_AVAILABLE:
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize model on startup."""
+    """Initialize model and monitoring on startup."""
     print("=" * 60)
     print("🚀 HEARTSIGHT API Starting...")
     print("=" * 60)
+
+    # Start Prometheus metrics server on port 9000
     try:
-        from src.utils.model_loader import get_model
+        from src.monitoring.prometheus_metrics import start_prometheus_metrics
+        import threading
+
+        metrics_thread = threading.Thread(
+            target=lambda: start_prometheus_metrics(port=9000, sleep_interval=None),
+            daemon=True,
+        )
+        metrics_thread.start()
+        print("✅ Prometheus metrics server started on port 9000")
+    except Exception as e:
+        print(f"⚠️  Could not start Prometheus metrics: {e}")
+
+    try:
 
         # Suppress all output during model loading
         import sys

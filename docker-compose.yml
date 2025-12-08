@@ -1,5 +1,9 @@
 version: "3.9"
 
+networks:
+  heartsight:
+    driver: bridge
+
 services:
   app:
     build:
@@ -11,11 +15,25 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MLFLOW_TRACKING_URI="http://localhost:5000"
+    volumes:
+      - ./data:/app/data
+      - ./mlruns:/app/mlruns
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "sh", "scripts/healthcheck.sh"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
-      timeout: 3s
+      timeout: 5s
       retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - heartsight
     profiles: ["dev", "test", "prod"]
 
   ui:
@@ -26,21 +44,35 @@ services:
       - ./ui:/app
     environment:
       - VITE_API_URL=http://localhost:8000
+      - NODE_ENV=development
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     ports:
       - "5173:5173"
     depends_on:
       - app
+    restart: unless-stopped
+    networks:
+      - heartsight
     profiles:
       - dev
 
   metrics:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: heartsight/app:latest
     container_name: heartsight_metrics
     working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1
     command: ["python", "src/monitoring/prometheus_metrics.py"]
     ports:
       - "9000:9000"
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - heartsight
     profiles: ["dev", "prod"]
 
   prometheus:
@@ -50,34 +82,58 @@ services:
       - "9090:9090"
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
     depends_on:
       - metrics
+    restart: unless-stopped
+    networks:
+      - heartsight
     profiles: ["dev", "prod"]
 
   grafana:
     image: grafana/grafana:latest
     container_name: heartsight_grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
+      - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
       - ./infra/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
       - grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
       - GF_INSTALL_PLUGINS=
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - heartsight
     profiles: ["dev", "prod"]
 
   drift_dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: heartsight/app:latest
     container_name: heartsight_drift_dashboard
     working_dir: /app
-    command: ["python", "src/monitoring/evidently_server.py"]
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["python", "src/monitoring/drift_dashboard.py"]
     ports:
       - "7000:7000"
     volumes:
       - ./data:/app/data
+      - ./docs:/app/docs
     depends_on:
       - app
+    restart: unless-stopped
+    networks:
+      - heartsight
     profiles: ["dev", "prod"]
 
   db:
@@ -85,9 +141,53 @@ services:
     container_name: heartsight_db
     env_file:
       - .env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-heartsight}
+      - POSTGRES_USER=${POSTGRES_USER:-heartsight}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me}
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-heartsight}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - heartsight
     profiles: ["dev", "test", "prod"]
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: heartsight_mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlflow/mlruns
+    environment:
+      - PYTHONUNBUFFERED=1
+    command:
+      - mlflow
+      - server
+      - --backend-store-uri
+      - sqlite:////mlflow/mlruns/mlflow.db
+      - --default-artifact-root
+      - /mlflow/mlruns
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+    restart: unless-stopped
+    networks:
+      - heartsight
+    profiles:
+      - dev
+
 
 volumes:
   grafana_data:
+  postgres_data:
+  prometheus_data:

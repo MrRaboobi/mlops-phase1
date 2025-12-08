@@ -4,29 +4,53 @@
 FROM python:3.11-slim AS builder
 WORKDIR /app
 COPY requirements.txt .
-# Upgrade pip and add generous timeouts/retries to reduce flaky network failures
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --default-timeout=120 --retries=10 -r requirements.txt
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable persistent pip cache and install Python deps
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt
 
 # =========================
 # Stage 2 — Runtime
 # =========================
 FROM python:3.11-slim AS runtime
-ENV APP_HOME=/app
+ENV APP_HOME=/app \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 WORKDIR $APP_HOME
 
-# Copy dependencies and source
+# Install runtime system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependencies from builder
 COPY --from=builder /usr/local /usr/local
+
+# Copy application code
 COPY src/ src/
 COPY scripts/ scripts/
+COPY manage.py .
 
-# Make healthcheck script executable
+# Make scripts executable
 RUN chmod +x scripts/*.sh
 
+# Create logs and data directories
+RUN mkdir -p /app/logs /app/data /app/mlruns
+
 # Create non-root user
-RUN useradd -m appuser
+RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
-HEALTHCHECK CMD ["sh", "scripts/healthcheck.sh"]
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

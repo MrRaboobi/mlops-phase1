@@ -52,9 +52,9 @@ def main():
             "desc": "Clean Cache Files",
         },
         "check": {"cmd": "pre-commit run --all-files", "desc": "Pre-commit Hooks"},
-        "evidently": {
-            "cmd": "python src/monitoring/evidently_server.py",
-            "desc": "Start Evidently Dashboard Server (port 7000)",
+        "metrics": {
+            "cmd": "python src/monitoring/prometheus_metrics.py",
+            "desc": "Start Prometheus Metrics Exporter (port 9000)",
         },
         "ingest": {
             "cmd": "python src/ingest.py",

@@ -182,8 +182,8 @@ def main():
     )
 
     # 3. Training Config
-    N_ESTIMATORS = 100
-    MAX_DEPTH = 6
+    N_ESTIMATORS = 600
+    MAX_DEPTH = 15
     LEARNING_RATE = 0.1
 
     with mlflow.start_run():
