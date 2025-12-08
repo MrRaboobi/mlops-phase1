@@ -36,25 +36,21 @@ services:
       - heartsight
     profiles: ["dev", "test", "prod"]
 
-  ui:
-    image: node:20-alpine
-    container_name: heartsight_ui
-    working_dir: /app
-    volumes:
-      - ./ui:/app
-    environment:
-      - VITE_API_URL=http://localhost:8000
-      - NODE_ENV=development
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+  frontend:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    image: heartsight/frontend:latest
+    container_name: heartsight_frontend
     ports:
-      - "5173:5173"
+      - "3000:80"
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - heartsight
-    profiles:
-      - dev
+    profiles: ["dev", "test", "prod"]
 
   metrics:
     build:

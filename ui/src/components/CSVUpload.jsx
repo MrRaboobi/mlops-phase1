@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import axios from 'axios'
 import Papa from 'papaparse'
+import { FaFileUpload, FaCheckCircle, FaUser, FaVenusMars } from 'react-icons/fa'
 import './CSVUpload.css'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -150,7 +151,7 @@ function CSVUpload({ onPrediction, onSignalLoad, onError, onPredictClick, fileLo
             setSignalArray(signalArray)
             setFileName(file.name)
             onSignalLoad(signalArray)
-            console.log('✅ CSV file loaded successfully. Ready for prediction.')
+            console.log('[CSVUpload] CSV file loaded successfully. Ready for prediction.')
           } catch (err) {
             console.error('CSV processing error:', err)
             onError(err.message || 'Failed to process ECG data')
@@ -171,21 +172,21 @@ function CSVUpload({ onPrediction, onSignalLoad, onError, onPredictClick, fileLo
   }
 
   const handlePredict = async () => {
-    console.log('🚀 [CSVUpload] handlePredict called')
+    console.log('[CSVUpload] handlePredict called')
 
     if (!signalArray) {
-      console.error('❌ [CSVUpload] No signal array available')
+      console.error('[CSVUpload] No signal array available')
       onError('Please upload a CSV file first')
       return
     }
 
-    console.log('📤 [CSVUpload] Preparing to send prediction request...')
+    console.log('[CSVUpload] Preparing to send prediction request...')
     console.log('   Signal shape:', signalArray.length, 'x', signalArray[0]?.length)
     console.log('   Age:', patientAge || 'not provided')
     console.log('   Sex:', patientSex || 'not provided')
 
     // Trigger predict click to show predicting screen
-    console.log('🔄 [CSVUpload] Showing predicting screen...')
+    console.log('[CSVUpload] Showing predicting screen...')
     onPredictClick()
 
     try {
@@ -196,7 +197,7 @@ function CSVUpload({ onPrediction, onSignalLoad, onError, onPredictClick, fileLo
         sex: patientSex || null,
       }
 
-      console.log('📡 [CSVUpload] Sending POST request to:', `${API_BASE}/predict`)
+      console.log('[CSVUpload] Sending POST request to:', `${API_BASE}/predict`)
       const requestStartTime = Date.now()
 
       // Send to API with timeout
@@ -205,19 +206,19 @@ function CSVUpload({ onPrediction, onSignalLoad, onError, onPredictClick, fileLo
       })
 
       const requestTime = ((Date.now() - requestStartTime) / 1000).toFixed(2)
-      console.log(`✅ [CSVUpload] Request completed in ${requestTime}s`)
-      console.log('📥 [CSVUpload] Prediction response received:', response.data)
+      console.log(`[CSVUpload] Request completed in ${requestTime}s`)
+      console.log('[CSVUpload] Prediction response received:', response.data)
 
       // Validate response
       if (!response.data.prediction) {
         throw new Error('Invalid response from server: missing prediction')
       }
 
-      console.log('✅ [CSVUpload] Calling onPrediction with results...')
+      console.log('[CSVUpload] Calling onPrediction with results...')
       onPrediction(response.data)
     } catch (err) {
       const requestTime = requestStartTime ? ((Date.now() - requestStartTime) / 1000).toFixed(2) : 'unknown'
-      console.error(`❌ [CSVUpload] Prediction error after ${requestTime}s:`, err)
+      console.error(`[CSVUpload] Prediction error after ${requestTime}s:`, err)
       console.error('   Error details:', {
         message: err.message,
         response: err.response?.data,
@@ -227,16 +228,18 @@ function CSVUpload({ onPrediction, onSignalLoad, onError, onPredictClick, fileLo
       const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to get prediction from ML model'
       onError(errorMessage)
       // Reset to upload step on error
-      console.log('❌ [CSVUpload] Error occurred, resetting...')
+      console.log('[CSVUpload] Error occurred, resetting...')
     }
   }
 
   return (
     <div className="csv-upload">
-      <h2>Upload ECG Data</h2>
-      <p className="upload-description">
-        Step 1: Upload your ECG CSV file, then enter patient information and click Predict
-      </p>
+      <div className="upload-header">
+        <h2>ECG Data Upload</h2>
+        <p className="upload-description">
+          Upload your ECG CSV file and provide patient information for analysis
+        </p>
+      </div>
 
       <div
         className={`drop-zone ${isDragging ? 'dragging' : ''} ${fileLoaded ? 'file-loaded' : ''}`}
@@ -253,33 +256,50 @@ function CSVUpload({ onPrediction, onSignalLoad, onError, onPredictClick, fileLo
           style={{ display: 'none' }}
         />
         <div className="drop-zone-content">
-          <div className="upload-icon">📁</div>
-          <p className="drop-zone-text">
-            {fileLoaded ? `✓ ${fileName} loaded` : isDragging ? 'Drop your CSV file here' : 'Click or drag CSV file here'}
-          </p>
-          <p className="drop-zone-hint">
-            {fileLoaded ? 'File ready for prediction' : 'Supported format: CSV with ECG signal data (12 channels)'}
-          </p>
+          {fileLoaded ? (
+            <>
+              <FaCheckCircle className="upload-icon success" />
+              <p className="drop-zone-text">{fileName}</p>
+              <p className="drop-zone-hint">File loaded successfully</p>
+            </>
+          ) : (
+            <>
+              <FaFileUpload className="upload-icon" />
+              <p className="drop-zone-text">
+                {isDragging ? 'Drop CSV file here' : 'Click or drag CSV file to upload'}
+              </p>
+              <p className="drop-zone-hint">
+                Supported format: CSV with ECG signal data (12 channels)
+              </p>
+            </>
+          )}
         </div>
       </div>
 
       <div className="patient-info">
-        <h3>Step 2: Enter Patient Information (Optional but Recommended)</h3>
+        <h3>
+          <FaUser className="info-icon" />
+          Patient Information
+          <span className="optional-label">(Optional)</span>
+        </h3>
         <div className="input-row">
           <div className="input-group">
-            <label htmlFor="age">Patient Age:</label>
+            <label htmlFor="age">Age</label>
             <input
               id="age"
               type="number"
               value={patientAge}
               onChange={(e) => setPatientAge(e.target.value)}
-              placeholder="e.g., 45"
+              placeholder="Enter age"
               min="0"
               max="120"
             />
           </div>
           <div className="input-group">
-            <label htmlFor="sex">Patient Sex:</label>
+            <label htmlFor="sex">
+              <FaVenusMars className="label-icon" />
+              Sex
+            </label>
             <select
               id="sex"
               value={patientSex}
@@ -299,11 +319,8 @@ function CSVUpload({ onPrediction, onSignalLoad, onError, onPredictClick, fileLo
             className="predict-button"
             onClick={handlePredict}
           >
-            🔍 Step 3: Predict ECG Class
+            Analyze ECG
           </button>
-          <p className="predict-hint">
-            Click to send ECG data to ML model for prediction
-          </p>
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { FaSpinner, FaCheckCircle, FaCog, FaDatabase, FaRobot, FaBookMedical, FaLightbulb } from 'react-icons/fa'
 import './PredictingScreen.css'
 
 function PredictingScreen() {
@@ -6,10 +7,10 @@ function PredictingScreen() {
   const [currentStep, setCurrentStep] = useState(0)
 
   const steps = [
-    { name: 'Extracting features from ECG signal', icon: '📊' },
-    { name: 'Running ML model prediction', icon: '🤖' },
-    { name: 'Retrieving medical guidelines', icon: '📚' },
-    { name: 'Generating AI explanation', icon: '💡' },
+    { name: 'Extracting features from ECG signal', icon: FaDatabase },
+    { name: 'Running ML model prediction', icon: FaRobot },
+    { name: 'Retrieving medical guidelines', icon: FaBookMedical },
+    { name: 'Generating AI explanation', icon: FaLightbulb },
   ]
 
   useEffect(() => {
@@ -42,25 +43,36 @@ function PredictingScreen() {
   return (
     <div className="predicting-screen">
       <div className="predicting-content">
-        <div className="spinner">⏳</div>
-        <h2>Predicting (Please Wait)...</h2>
-        <p className="timer">⏱️ Elapsed time: {formatTime(elapsedTime)}</p>
+        <div className="spinner">
+          <FaSpinner />
+        </div>
+        <h2>Analyzing ECG Signal</h2>
+        <p className="timer">Elapsed time: {formatTime(elapsedTime)}</p>
         <p className="predicting-description">
-          Analyzing your ECG signal with AI model and generating personalized explanation
+          Processing your ECG data with AI model and generating personalized analysis
         </p>
 
         <div className="steps-container">
-          {steps.map((step, index) => (
-            <div
-              key={index}
-              className={`step-item ${index <= currentStep ? 'active' : 'pending'}`}
-            >
-              <span className="step-icon">
-                {index < currentStep ? '✅' : index === currentStep ? '⏳' : '⏸️'}
-              </span>
-              <span className="step-name">{step.name}</span>
-            </div>
-          ))}
+          {steps.map((step, index) => {
+            const IconComponent = step.icon
+            return (
+              <div
+                key={index}
+                className={`step-item ${index <= currentStep ? 'active' : 'pending'}`}
+              >
+                <span className="step-icon">
+                  {index < currentStep ? (
+                    <FaCheckCircle className="icon-check" />
+                  ) : index === currentStep ? (
+                    <FaSpinner className="icon-spin" />
+                  ) : (
+                    <IconComponent className="icon-pending" />
+                  )}
+                </span>
+                <span className="step-name">{step.name}</span>
+              </div>
+            )
+          })}
         </div>
 
         <p className="predicting-hint">

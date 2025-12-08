@@ -1,5 +1,5 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.3.1+cpu
+#torch==2.3.1+cpu
 
 # Security: Pin urllib3 first to avoid vulnerable versions
 urllib3>=2.6.0  # Security fix for GHSA-gm62-xv2j-4w53 and GHSA-2xpw-w6gg-jr37

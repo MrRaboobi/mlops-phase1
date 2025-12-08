@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FaHeartbeat, FaFileUpload, FaChartLine, FaComments } from 'react-icons/fa'
 import CSVUpload from './components/CSVUpload'
 import ECGVisualization from './components/ECGVisualization'
 import PredictionDisplay from './components/PredictionDisplay'
@@ -14,11 +15,11 @@ function App() {
   const [error, setError] = useState(null)
 
   const handlePrediction = (data) => {
-    console.log('✅ [App] handlePrediction called with data:', data)
+    console.log('[App] handlePrediction called with data:', data)
     setPredictionData(data)
     setStep('results')
     setLoading(false)
-    console.log('✅ [App] Switched to results step')
+    console.log('[App] Switched to results step')
   }
 
   const handleSignalLoad = (signal) => {
@@ -44,7 +45,7 @@ function App() {
   }
 
   const handlePredictClick = () => {
-    console.log('🔄 [App] handlePredictClick called - switching to predicting step')
+    console.log('[App] handlePredictClick called - switching to predicting step')
     setStep('predicting')
     setLoading(true)
   }
@@ -60,8 +61,13 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>❤️ HEARTSIGHT</h1>
-        <p>AI-Powered ECG Monitoring & Early Warning System</p>
+        <div className="header-content">
+          <FaHeartbeat className="header-icon" />
+          <div className="header-text">
+            <h1>HEARTSIGHT</h1>
+            <p>AI-Powered ECG Monitoring & Early Warning System</p>
+          </div>
+        </div>
       </header>
 
       <main className="app-main">
@@ -83,49 +89,44 @@ function App() {
           )}
 
           {step === 'results' && predictionData && (
-            <>
+            <div className="results-container">
               <div className="results-header">
                 <button className="reset-button" onClick={handleReset}>
-                  ← Upload New ECG
+                  <FaFileUpload /> Upload New ECG
                 </button>
-                <h2>Analysis Complete</h2>
-              </div>
-
-              <div className="diagnosis-banner">
-                <h1 className="diagnosis-message">
-                  {predictionData.prediction === 'NORM'
-                    ? '✅ You are Normal'
-                    : `⚠️ You have ${predictionData.prediction}`}
-                </h1>
-                <p className="diagnosis-subtitle">
-                  Confidence: {(predictionData.confidence * 100).toFixed(1)}%
-                </p>
-              </div>
-
-              {ecgSignal && (
-                <div className="visualization-section">
-                  <h2>ECG Signal Visualization</h2>
-                  <ECGVisualization signal={ecgSignal} />
+                <div className="diagnosis-inline">
+                  <span className="diagnosis-code-inline">{predictionData.prediction}</span>
+                  <span className="diagnosis-confidence-inline">
+                    {(predictionData.confidence * 100).toFixed(1)}% Confidence
+                  </span>
                 </div>
-              )}
-
-              <div className="prediction-section">
-                <PredictionDisplay data={predictionData} />
               </div>
 
-              <div className="chat-section">
-                <ChatWidget
-                  initialDiagnosis={predictionData.prediction}
-                  patientAge={predictionData.patient_metadata?.age}
-                  patientSex={predictionData.patient_metadata?.sex}
-                />
+              <div className="results-grid">
+                {ecgSignal && (
+                  <div className="visualization-section">
+                    <ECGVisualization signal={ecgSignal} />
+                  </div>
+                )}
+
+                <div className="chat-section">
+                  <ChatWidget
+                    initialDiagnosis={predictionData.prediction}
+                    patientAge={predictionData.patient_metadata?.age}
+                    patientSex={predictionData.patient_metadata?.sex}
+                  />
+                </div>
+
+                <div className="prediction-section">
+                  <PredictionDisplay data={predictionData} />
+                </div>
               </div>
-            </>
+            </div>
           )}
 
           {error && (
             <div className="error-message">
-              <p>❌ {error}</p>
+              <p>{error}</p>
               <button className="retry-button" onClick={handleReset}>
                 Try Again
               </button>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
+import { FaComments, FaPaperPlane, FaUser, FaRobot } from 'react-icons/fa'
 import './ChatWidget.css'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -65,10 +66,16 @@ function ChatWidget({ initialDiagnosis, patientAge, patientSex }) {
 
   return (
     <div className="chat-widget">
-      <h2>💬 Ask Questions About Your Results</h2>
+      <div className="chat-header">
+        <FaComments className="chat-icon" />
+        <h2>Ask Questions About Your Results</h2>
+      </div>
       <div className="chat-messages">
         {messages.map((msg, idx) => (
           <div key={idx} className={`chat-message ${msg.role}`}>
+            <div className="message-avatar">
+              {msg.role === 'user' ? <FaUser /> : <FaRobot />}
+            </div>
             <div className="message-content">
               {msg.content.split('\n').map((line, i) => (
                 <p key={i}>{line}</p>
@@ -78,6 +85,9 @@ function ChatWidget({ initialDiagnosis, patientAge, patientSex }) {
         ))}
         {loading && (
           <div className="chat-message assistant">
+            <div className="message-avatar">
+              <FaRobot />
+            </div>
             <div className="message-content">
               <div className="typing-indicator">
                 <span></span>
@@ -102,8 +112,9 @@ function ChatWidget({ initialDiagnosis, patientAge, patientSex }) {
           onClick={handleSend}
           disabled={loading || !input.trim()}
           className="chat-send-button"
+          aria-label="Send message"
         >
-          Send
+          <FaPaperPlane />
         </button>
       </div>
     </div>
