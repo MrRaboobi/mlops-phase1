@@ -385,6 +385,8 @@ The model predicts one of five diagnostic super-classes: NORM (Normal), MI (Myoc
 
 Training parameters (n_estimators, max_depth, learning_rate, model_type, data_source) are logged as MLflow parameters. Metrics including test accuracy and macro-averaged F1-score are logged after evaluation. The trained model is registered in MLflow Model Registry as `heartsight_xgb_v1` for deployment. The model is loaded in the API (`src/api/routers/predict.py`) via `model_loader.py` to serve predictions for the RAG/LLM explanation pipeline.
 
+---
+
 ### Phase 2 - The RAG Engine
 
 The RAG (Retrieval-Augmented Generation) system integrates medical guidelines with LLM-generated explanations for ECG predictions. Five PDF documents covering PTB-XL diagnostic classes (AHA Guidelines for Myocardial Infarction, Hypertrophy Management, ST-T Changes, Conduction Disturbances, and General ECG Guide) are stored in `data/docs/`.
@@ -400,6 +402,8 @@ The engine retrieves relevant context using similarity search based on diagnosis
 **Inference Flow (`src/api/routers/predict.py` and `src/api/routers/chat.py`):**
 
 The API accepts ECG signals and patient metadata (age, sex). The system first predicts the ECG class via the XGBoost model, then retrieves relevant medical guidelines from ChromaDB using the predicted diagnosis and patient demographics, and finally generates personalized explanations via Gemini LLM combining prediction results and retrieved context. The chat endpoint (`src/api/routers/chat.py`) enables follow-up questions using the same RAG pipeline.
+
+---
 
 ### Phase 3 - Prompt Engineering & Evaluation
 
@@ -451,6 +455,8 @@ streamlit run experiments/ab_dashboard.py
 - `experiments/prompt_report.md` (auto-generated results)
 - `mlruns/Prompt_Strategy_Evaluation/` (MLflow tracking data)
 
+---
+
 ### Phase 4 - Guardrails & Monitoring
 
 Monitoring is wired into the backend and starts as soon as we launch the API `python manage.py dev` or the Dockerized app. A Prometheus HTTP server on port 9000 exposes metrics; Prometheus scrapes it and Grafana dashboards visualize them. We track request/latency histograms, prediction counts/class distribution, and model/RAG latencies. LLM metrics include latency, token counts, cost, and guardrail violations. New counters/histograms cover average prediction time, average chat response time, total predictions, total chat responses, and total tokens generated. Guardrail events (input validation, output moderation) are logged via Prometheus counters for violations by endpoint/stage/rule.
@@ -458,6 +464,8 @@ Monitoring is wired into the backend and starts as soon as we launch the API `py
 Guardrails (in `src/guardrails.py`) enforce input validation (PII/prompt-injection redaction) and output moderation (toxicity/medical advice filters; e.g., blocking dosage instructions and replacing with "Consult a cardiologist"). They are invoked inside the RAG pipeline and chat handlers to sanitize both inbound and outbound text. Drift monitoring hooks (`src/monitoring/drift.py`) let Evidently (or equivalent) assess corpus/data drift; drift scores are published as gauges.
 
 Grafana dashboards (provisioned under `infra/grafana`) include panels for LLM latency/tokens/cost, guardrail violations, prediction throughput/latency, and drift indicators. Prometheus is configured in `infra/prometheus/prometheus.yml` to scrape the backend metrics endpoint.
+
+---
 
 ### Phase 5 - CI/CD, Security & Cloud Integration
 
@@ -504,6 +512,8 @@ Two AWS services are integrated: **Amazon S3** for document storage (`src/utils/
   <br/>
   <em>Dashboard showing drift</em>
 </p>
+
+---
 
 ### Bonus Paths Explored
 
