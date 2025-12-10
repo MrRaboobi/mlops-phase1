@@ -11,10 +11,16 @@ from src.rag_engine import get_explainer
 from src.guardrails import apply_guardrails_to_input, apply_guardrails_to_output
 
 try:
-    from src.monitoring.prometheus_metrics import observe_llm_call
+    from src.monitoring.prometheus_metrics import (
+        observe_llm_call,
+        record_chat_message,
+    )
 except Exception:  # pragma: no cover - metrics optional
 
     def observe_llm_call(*args, **kwargs):  # type: ignore[no-redef]
+        return None
+
+    def record_chat_message(*args, **kwargs):  # type: ignore[no-redef]
         return None
 
 
@@ -149,6 +155,7 @@ Your response:
                 tokens=approx_tokens,
                 cost_usd=0.0,
             )
+            record_chat_message(latency_seconds=llm_latency, tokens=approx_tokens)
 
             print(
                 f"   ✅ Gemini chat response generated in {llm_latency:.2f}s "

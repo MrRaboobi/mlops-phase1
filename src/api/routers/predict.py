@@ -131,6 +131,7 @@ def predict_ecg(input_data: ECGSignalInput):
                 model_latency=model_time,
                 rag_latency=rag_time,
                 status="success",
+                total_latency=total_time,
             )
         except Exception as metrics_error:
             print(f"⚠️  Warning: Failed to record metrics: {metrics_error}")

@@ -20,9 +20,6 @@ services:
       - ./data:/app/data
       - ./mlruns:/app/mlruns
       - ./logs:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -109,50 +106,6 @@ services:
     networks:
       - heartsight
     profiles: ["dev", "prod"]
-
-  drift_dashboard:
-    image: heartsight/app:latest
-    container_name: heartsight_drift_dashboard
-    working_dir: /app
-    environment:
-      - PYTHONUNBUFFERED=1
-    command: ["python", "src/monitoring/drift_dashboard.py"]
-    ports:
-      - "7000:7000"
-    volumes:
-      - ./data:/app/data
-      - ./docs:/app/docs
-    depends_on:
-      app:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - heartsight
-    profiles: ["dev", "prod"]
-
-  db:
-    image: postgres:16-alpine
-    container_name: heartsight_db
-    env_file:
-      - .env
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB:-heartsight}
-      - POSTGRES_USER=${POSTGRES_USER:-heartsight}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-heartsight}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-    networks:
-      - heartsight
-    profiles: ["dev", "test", "prod"]
 
   mlflow:
     build:
