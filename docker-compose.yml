@@ -11,6 +11,7 @@ services:
     container_name: heartsight_app
     ports:
       - "8000:8000"
+      - "9000:9000"  # expose app metrics directly
     env_file:
       - .env
     environment:
@@ -80,7 +81,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
     depends_on:
-      - metrics
+      - app
     restart: unless-stopped
     networks:
       - heartsight

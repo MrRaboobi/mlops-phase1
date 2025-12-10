@@ -10,13 +10,13 @@
 
 | Strategy | ROUGE-L | BLEU | Factuality (1-5) | Helpfulness (1-5) |
 |----------|---------|------|-------------------|-------------------|
-| baseline_zero_shot | 0.067 | 0.000 | 3.00 | 3.20 |
-| few_shot_k3 | 0.137 | 0.000 | 5.00 | 4.00 |
-| advanced_cot | 0.095 | 0.000 | 3.00 | 2.80 |
+| baseline_zero_shot | 0.467 | 0.317 | 5.00 | 4.20 |
+| few_shot_k3 | 0.337 | 0.292 | 4.00 | 4.00 |
+| advanced_cot | 0.195 | 0.110 | 3.00 | 2.80 |
 
 ## Summary & Winner
 
-- Highest **Helpfulness**: **few_shot_k3**
-- Highest **Factuality**: **few_shot_k3**
+- Highest **Helpfulness**: **baseline_zero_shot**
+- Highest **Factuality**: **baseline_zero_shot**
 
-Overall, the advanced chain-of-thought strategy often produces more detailed and tailored explanations, but the few-shot strategy can be more concise and style-consistent. The zero-shot baseline is simplest but tends to be less robust for edge cases.
+Overall, the advanced chain-of-thought strategy often produces more detailed and tailored explanations, but the few-shot strategy can be more concise and style-consistent. The zero-shot baseline is simplest and tends to be robust for edge cases.

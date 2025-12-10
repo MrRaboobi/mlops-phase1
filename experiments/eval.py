@@ -55,9 +55,33 @@ prompts = {name: load_prompt(path) for name, path in prompt_files.items()}
 rouge = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
 
 
-def compute_text_metrics(pred: str, ref: str):
+def compute_text_metrics(pred: str, ref: str, n_gram: int = 1):
+    """
+    Compute ROUGE-L and BLEU scores.
+
+    Args:
+        pred: Predicted text
+        ref: Reference text
+        n_gram: N-gram order for BLEU (1-4). Default is 2 (bigrams).
+                1 = unigrams, 2 = bigrams, 3 = trigrams, 4 = 4-grams
+    """
     r = rouge.score(ref, pred)["rougeL"].fmeasure  # using ref as target
-    b = sentence_bleu([ref.split()], pred.split()) if ref.strip() else 0.0
+
+    # Set weights based on n_gram value
+    if n_gram == 1:
+        weights = (1.0, 0, 0, 0)  # BLEU-1: only unigrams
+    elif n_gram == 2:
+        weights = (0.5, 0.5, 0, 0)  # BLEU-2: unigrams + bigrams
+    elif n_gram == 3:
+        weights = (0.33, 0.33, 0.33, 0)  # BLEU-3: unigrams + bigrams + trigrams
+    else:  # n_gram == 4 (default)
+        weights = (0.25, 0.25, 0.25, 0.25)  # BLEU-4: all n-grams
+
+    b = (
+        sentence_bleu([ref.split()], pred.split(), weights=weights)
+        if ref.strip()
+        else 0.0
+    )
     return r, b
 
 
@@ -78,7 +102,7 @@ mlflow.set_experiment("Prompt_Strategy_Evaluation")
 
 results = {}
 
-with mlflow.start_run(run_name="prompt_evaluation"):
+with mlflow.start_run(run_name="prompt_evaluation2"):
 
     mlflow.log_param("llm_model", "gemini-2.5-flash")
     mlflow.log_param("n_examples", len(dataset))
@@ -114,7 +138,8 @@ with mlflow.start_run(run_name="prompt_evaluation"):
             print("\nNow rate this explanation:")
 
             # Quantitative text metrics
-            r, b = compute_text_metrics(generated, sample["reference"])
+            # Change n_gram parameter to reduce N-gram value (1-4, default is 2 for bigrams)
+            r, b = compute_text_metrics(generated, sample["reference"], n_gram=2)
             rouge_scores.append(r)
             bleu_scores.append(b)
 

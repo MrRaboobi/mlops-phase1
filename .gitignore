@@ -52,6 +52,7 @@ pytest_cache/
 __pycache__/
 data/
 mlruns/
+docs/RAG_Pipeline.png
 
 # ==========================
 # Temporary / Generated Files
